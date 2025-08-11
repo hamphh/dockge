@@ -26,7 +26,7 @@
                         {{ $t("editStack") }}
                     </button>
 
-                    <button v-if="!isEditMode && !active" class="btn btn-primary" :disabled="processing" @click="startStack">
+                    <button v-if="!isEditMode && exited" class="btn btn-primary" :disabled="processing" @click="startStack">
                         <font-awesome-icon icon="play" class="me-1" />
                         {{ $t("startStack") }}
                     </button>
@@ -252,7 +252,8 @@ import {
     getCombinedTerminalName,
     getComposeTerminalName,
     PROGRESS_TERMINAL_ROWS,
-    RUNNING
+    RUNNING, RUNNING_AND_EXITED,
+    EXITED
 } from "../../../common/util-common";
 import { BModal } from "bootstrap-vue-next";
 import NetworkInput from "../components/NetworkInput.vue";
@@ -363,7 +364,11 @@ export default {
         },
 
         active() {
-            return this.status === RUNNING;
+            return this.status === RUNNING || this.status === RUNNING_AND_EXITED;
+        },
+
+        exited() {
+            return this.status === EXITED || this.status === RUNNING_AND_EXITED;
         },
 
         terminalName() {

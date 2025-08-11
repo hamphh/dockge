@@ -13,8 +13,8 @@ import {
     EXITED, getCombinedTerminalName,
     getComposeTerminalName, getContainerExecTerminalName,
     PROGRESS_TERMINAL_ROWS,
-    RUNNING, TERMINAL_ROWS,
-    UNKNOWN
+    RUNNING, RUNNING_AND_EXITED,
+    TERMINAL_ROWS, UNKNOWN
 } from "../common/util-common";
 import { InteractiveTerminal, Terminal } from "./terminal";
 import childProcessAsync from "promisify-child-process";
@@ -363,11 +363,11 @@ export class Stack {
     static statusConvert(status : string) : number {
         if (status.startsWith("created")) {
             return CREATED_STACK;
+        } else if (status.includes("exited") && status.includes("running")) {
+            return RUNNING_AND_EXITED;
         } else if (status.includes("exited")) {
-            // If one of the service is exited, we consider the stack is exited
             return EXITED;
         } else if (status.startsWith("running")) {
-            // If there is no exited services, there should be only running services
             return RUNNING;
         } else {
             return UNKNOWN;
@@ -430,6 +430,33 @@ export class Stack {
         let exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "restart" ], this.path);
         if (exitCode !== 0) {
             throw new Error("Failed to restart, please check the terminal output for more information.");
+        }
+        return exitCode;
+    }
+
+    async stopService(socket: DockgeSocket, service: string): Promise<number> {
+        const terminalName = getComposeTerminalName(socket.endpoint, this.name);
+        let exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "stop", service ], this.path);
+        if (exitCode !== 0) {
+            throw new Error("Failed to stop service, please check the terminal output for more information.");
+        }
+        return exitCode;
+    }
+
+    async startService(socket: DockgeSocket, service: string): Promise<number> {
+        const terminalName = getComposeTerminalName(socket.endpoint, this.name);
+        let exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "start", service ], this.path);
+        if (exitCode !== 0) {
+            throw new Error("Failed to start service, please check the terminal output for more information.");
+        }
+        return exitCode;
+    }
+
+    async restartService(socket: DockgeSocket, service: string): Promise<number> {
+        const terminalName = getComposeTerminalName(socket.endpoint, this.name);
+        let exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "restart", service ], this.path);
+        if (exitCode !== 0) {
+            throw new Error("Failed to restart service, please check the terminal output for more information.");
         }
         return exitCode;
     }
