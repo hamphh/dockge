@@ -14,12 +14,14 @@
                     </a>
                 </div>
             </div>
-            <div class="col-5">
-                <div class="function">
-                    <router-link v-if="!isEditMode" class="btn btn-normal" :to="terminalRouteLink" disabled="">
-                        <font-awesome-icon icon="terminal" />
-                        Bash
-                    </router-link>
+            <div class="col-5 d-flex justify-content-end align-items-start">
+                <div v-if="!isEditMode" class="btn-group" role="group">
+                    <div v-if="started" class="btn btn-secondary me-1">
+                        <router-link :to="terminalRouteLink"><font-awesome-icon icon="terminal" /></router-link>
+                    </div>
+                    <button v-if="!started" type="button" class="btn btn-success me-1" @click="startService"><font-awesome-icon icon="play" /></button>
+                    <button v-if="started" type="button" class="btn btn-danger me-1" @click="stopService"><font-awesome-icon icon="stop" /></button>
+                    <button v-if="started" type="button" class="btn btn-warning me-1" @click="restartService"><font-awesome-icon icon="rotate" /></button>
                 </div>
             </div>
         </div>
@@ -188,6 +190,10 @@ export default defineComponent({
             }
         },
 
+        started() {
+            return this.status === "running" || this.status === "healthy" || this.status === "unhealthy";
+        },
+
         terminalRouteLink() {
             if (this.endpoint) {
                 return {
@@ -283,6 +289,21 @@ export default defineComponent({
         },
         remove() {
             delete this.jsonObject.services[this.name];
+        },
+        stopService() {
+            this.$root.emitAgent(this.endpoint, "stopService", this.stack.name, this.name, (res) => {
+                this.$root.toastRes(res);
+            });
+        },
+        startService() {
+            this.$root.emitAgent(this.endpoint, "startService", this.stack.name, this.name, (res) => {
+                this.$root.toastRes(res);
+            });
+        },
+        restartService() {
+            this.$root.emitAgent(this.endpoint, "restartService", this.stack.name, this.name, (res) => {
+                this.$root.toastRes(res);
+            });
         },
     }
 });

@@ -218,6 +218,84 @@ export class DockerSocketHandler extends AgentSocketHandler {
             }
         });
 
+        // stop service
+        agentSocket.on("stopService", async (stackName : unknown, serviceName: unknown, callback) => {
+            try {
+                checkLogin(socket);
+
+                if (typeof(stackName) !== "string") {
+                    throw new ValidationError("Stack name must be a string");
+                }
+
+                if (typeof(serviceName) !== "string") {
+                    throw new ValidationError("Service name must be a string");
+                }
+
+                const stack = await Stack.getStack(server, stackName);
+                await stack.stopService(socket, serviceName);
+                callbackResult({
+                    ok: true,
+                    msg: "Stopped",
+                    msgi18n: true,
+                }, callback);
+                server.sendStackList();
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
+
+        // start service
+        agentSocket.on("startService", async (stackName : unknown, serviceName: unknown, callback) => {
+            try {
+                checkLogin(socket);
+
+                if (typeof(stackName) !== "string") {
+                    throw new ValidationError("Stack name must be a string");
+                }
+
+                if (typeof(serviceName) !== "string") {
+                    throw new ValidationError("Service name must be a string");
+                }
+
+                const stack = await Stack.getStack(server, stackName);
+                await stack.startService(socket, serviceName);
+                callbackResult({
+                    ok: true,
+                    msg: "Started",
+                    msgi18n: true,
+                }, callback);
+                server.sendStackList();
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
+
+        // restart service
+        agentSocket.on("restartService", async (stackName : unknown, serviceName: unknown, callback) => {
+            try {
+                checkLogin(socket);
+
+                if (typeof(stackName) !== "string") {
+                    throw new ValidationError("Stack name must be a string");
+                }
+
+                if (typeof(serviceName) !== "string") {
+                    throw new ValidationError("Service name must be a string");
+                }
+
+                const stack = await Stack.getStack(server, stackName);
+                await stack.restartService(socket, serviceName);
+                callbackResult({
+                    ok: true,
+                    msg: "Restarted",
+                    msgi18n: true,
+                }, callback);
+                server.sendStackList();
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
+
         // Services status
         agentSocket.on("serviceStatusList", async (stackName : unknown, callback) => {
             try {
