@@ -532,8 +532,8 @@ export class Stack {
         terminal.start();
     }
 
-    async getServiceStatusList() {
-        let statusList = new Map<string, number>();
+    async getServiceStatusJsonList() {
+        let statusList = new Map<string, string>();
 
         try {
             let res = await childProcessAsync.spawn("docker", [ "compose", "ps", "--format", "json" ], {
@@ -550,11 +550,7 @@ export class Stack {
             for (let line of lines) {
                 try {
                     let obj = JSON.parse(line);
-                    if (obj.Health === "") {
-                        statusList.set(obj.Service, obj.State);
-                    } else {
-                        statusList.set(obj.Service, obj.Health);
-                    }
+                    statusList.set(obj.Service, line);
                 } catch (e) {
                 }
             }

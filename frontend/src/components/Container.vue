@@ -17,6 +17,7 @@
             <div class="col-5 d-flex justify-content-end align-items-start">
                 <div v-if="!isEditMode" class="btn-group me-2" role="group">
                     <router-link v-if="started" class="btn btn-normal me-1" :to="logRouteLink"><font-awesome-icon icon="file-text" /></router-link>
+                    <router-link v-if="started" class="btn btn-normal me-1" :to="inspectRouteLink"><font-awesome-icon icon="info-circle" /></router-link>
                     <router-link v-if="started" class="btn btn-normal me-1" :to="terminalRouteLink"><font-awesome-icon icon="terminal" /></router-link>
                 </div>
 
@@ -160,9 +161,9 @@ export default defineComponent({
             type: Boolean,
             default: false,
         },
-        status: {
-            type: String,
-            default: "N/A",
+        statusObj: {
+            type: Object,
+            default: undefined,
         }
     },
     emits: [
@@ -173,6 +174,20 @@ export default defineComponent({
         };
     },
     computed: {
+
+        status() {
+            if (this.statusObj) {
+                const healthStatus = this.statusObj.Health;
+
+                if (healthStatus === "") {
+                    return this.statusObj.State;
+                } else {
+                    return healthStatus;
+                }
+            } else {
+                return "N/A";
+            }
+        },
 
         networkList() {
             let list = [];
@@ -212,6 +227,25 @@ export default defineComponent({
                     params: {
                         stackName: this.stackName,
                         serviceName: this.name,
+                    },
+                };
+            }
+        },
+
+        inspectRouteLink() {
+            if (this.endpoint) {
+                return {
+                    name: "containerInspectEndpoint",
+                    params: {
+                        endpoint: this.endpoint,
+                        containerName: this.statusObj.Name,
+                    },
+                };
+            } else {
+                return {
+                    name: "containerInspect",
+                    params: {
+                        containerName: this.statusObj.Name,
                     },
                 };
             }

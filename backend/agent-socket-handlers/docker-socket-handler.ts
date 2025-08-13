@@ -324,7 +324,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
             }
         });
 
-        // join service log
+        // Container log
         agentSocket.on("joinContainerLog", async (stackName : unknown, serviceName: unknown, callback) => {
             try {
                 checkLogin(socket);
@@ -348,8 +348,28 @@ export class DockerSocketHandler extends AgentSocketHandler {
             }
         });
 
+        // Container inspect
+        agentSocket.on("containerInspect", async (containerName: unknown, callback) => {
+            try {
+                checkLogin(socket);
+
+                if (typeof(containerName) !== "string") {
+                    throw new ValidationError("Service name must be a string");
+                }
+
+                const inspectData = await server.getContainerInspectData(containerName);
+
+                callbackResult({
+                    ok: true,
+                    inspectData
+                }, callback);
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
+
         // Services status
-        agentSocket.on("serviceStatusList", async (stackName : unknown, callback) => {
+        agentSocket.on("serviceStatusJsonList", async (stackName : unknown, callback) => {
             try {
                 checkLogin(socket);
 
@@ -358,10 +378,10 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 }
 
                 const stack = await Stack.getStack(server, stackName, true);
-                const serviceStatusList = Object.fromEntries(await stack.getServiceStatusList());
+                const serviceStatusJsonList = Object.fromEntries(await stack.getServiceStatusJsonList());
                 callbackResult({
                     ok: true,
-                    serviceStatusList,
+                    serviceStatusJsonList: serviceStatusJsonList,
                 }, callback);
             } catch (e) {
                 callbackError(e, callback);

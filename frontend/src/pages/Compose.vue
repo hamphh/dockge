@@ -128,7 +128,7 @@
                             :name="name"
                             :is-edit-mode="isEditMode"
                             :first="name === Object.keys(jsonConfig.services)[0]"
-                            :status="serviceStatusList[name]"
+                            :statusObj="getServiceStatus(name)"
                         />
                     </div>
 
@@ -306,7 +306,7 @@ export default {
             stack: {
 
             },
-            serviceStatusList: {},
+            serviceStatusJsonList: {},
             isEditMode: false,
             submitted: false,
             showDeleteDialog: false,
@@ -501,14 +501,24 @@ export default {
                 return;
             }
 
-            this.$root.emitAgent(this.endpoint, "serviceStatusList", this.stack.name, (res) => {
+            this.$root.emitAgent(this.endpoint, "serviceStatusJsonList", this.stack.name, (res) => {
                 if (res.ok) {
-                    this.serviceStatusList = res.serviceStatusList;
+                    this.serviceStatusJsonList = res.serviceStatusJsonList;
                 }
                 if (!this.stopServiceStatusTimeout) {
                     this.startServiceStatusTimeout();
                 }
             });
+        },
+
+        getServiceStatus(serviceName) {
+            const serviceStatusJson = this.serviceStatusJsonList[serviceName];
+
+            if (serviceStatusJson) {
+                return JSON.parse(serviceStatusJson);
+            } else {
+                return undefined;
+            }
         },
 
         exitConfirm(next) {

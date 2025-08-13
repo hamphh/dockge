@@ -8,6 +8,7 @@ import Console from "./pages/Console.vue";
 import Compose from "./pages/Compose.vue";
 import ContainerTerminal from "./pages/ContainerTerminal.vue";
 import ContainerLog from "./pages/ContainerLog.vue";
+import ContainerInspect from "./pages/ContainerInspect.vue";
 
 const Settings = () => import("./pages/Settings.vue");
 
@@ -62,6 +63,16 @@ const routes = [
                                 path: "/log/:stackName/:serviceName/:endpoint",
                                 component: ContainerLog,
                                 name: "containerLogEndpoint",
+                            },
+                            {
+                                path: "/inspect/:containerName",
+                                component: ContainerInspect,
+                                name: "containerInspect",
+                            },
+                            {
+                                path: "/inspect/:containerName/:endpoint",
+                                component: ContainerInspect,
+                                name: "containerInspectEndpoint",
                             },
                         ]
                     },

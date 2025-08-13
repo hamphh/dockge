@@ -637,6 +637,22 @@ export class DockgeServer {
         return list;
     }
 
+    async getContainerInspectData(containerName : string): Promise<string> {
+        try {
+            let res = await childProcessAsync.spawn("docker", [ "inspect", "--format", "json", containerName ], {
+                encoding: "utf-8",
+            });
+
+            if (res.stdout) {
+                return res.stdout?.toString();
+            }
+        } catch (e) {
+            log.error("getDockerStats", e);
+        }
+
+        return "";
+    }
+
     get stackDirFullPath() {
         return path.resolve(this.stacksDir);
     }
