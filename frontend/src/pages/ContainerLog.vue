@@ -34,12 +34,9 @@ export default {
         },
     },
     mounted() {
-        this.joinContainerLog();
+        this.$root.emitAgent(this.endpoint, "joinContainerLog", this.stackName, this.serviceName, (res) => {});
     },
     methods: {
-        joinContainerLog() {
-            this.$root.emitAgent(this.endpoint, "joinContainerLog", this.stackName, this.serviceName, (res) => {});
-        }
     }
 };
 </script>

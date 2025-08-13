@@ -407,7 +407,13 @@ export default defineComponent({
             });
         },
 
-        unbindTerminal(terminalName : string) {
+        unbindTerminal(endpoint : string, terminalName : string) {
+            this.emitAgent(endpoint, "terminalLeave", terminalName, (res) => {
+                if (!res.ok) {
+                    this.toastRes(res);
+                }
+            });
+
             terminalMap.delete(terminalName);
         },
 

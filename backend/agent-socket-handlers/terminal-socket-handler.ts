@@ -83,38 +83,6 @@ export class TerminalSocketHandler extends AgentSocketHandler {
             }
         });
 
-        // Interactive Terminal for containers
-        agentSocket.on("interactiveTerminal", async (stackName : unknown, serviceName : unknown, shell : unknown, callback) => {
-            try {
-                checkLogin(socket);
-
-                if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string.");
-                }
-
-                if (typeof(serviceName) !== "string") {
-                    throw new ValidationError("Service name must be a string.");
-                }
-
-                if (typeof(shell) !== "string") {
-                    throw new ValidationError("Shell must be a string.");
-                }
-
-                log.debug("interactiveTerminal", "Stack name: " + stackName);
-                log.debug("interactiveTerminal", "Service name: " + serviceName);
-
-                // Get stack
-                const stack = await Stack.getStack(server, stackName);
-                stack.joinContainerTerminal(socket, serviceName, shell);
-
-                callbackResult({
-                    ok: true,
-                }, callback);
-            } catch (e) {
-                callbackError(e, callback);
-            }
-        });
-
         // Join Output Terminal
         agentSocket.on("terminalJoin", async (terminalName : unknown, callback) => {
             if (typeof(callback) !== "function") {
@@ -143,23 +111,27 @@ export class TerminalSocketHandler extends AgentSocketHandler {
             }
         });
 
-        // Leave Combined Terminal
-        agentSocket.on("leaveCombinedTerminal", async (stackName : unknown, callback) => {
+        // Join Output Terminal
+        agentSocket.on("terminalLeave", async (terminalName : unknown, callback) => {
+            if (typeof(callback) !== "function") {
+                log.debug("console", "Callback is not a function.");
+                return;
+            }
+
             try {
                 checkLogin(socket);
-
-                log.debug("leaveCombinedTerminal", "Stack name: " + stackName);
-
-                if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string.");
+                if (typeof(terminalName) !== "string") {
+                    throw new ValidationError("Terminal name must be a string.");
                 }
 
-                const stack = await Stack.getStack(server, stackName);
-                await stack.leaveCombinedTerminal(socket);
+                const terminal = Terminal.getTerminal(terminalName);
+                if (terminal) {
+                    terminal.leave(socket);
+                }
 
-                callbackResult({
-                    ok: true,
-                }, callback);
+                callback({
+                    ok: true
+                });
             } catch (e) {
                 callbackError(e, callback);
             }

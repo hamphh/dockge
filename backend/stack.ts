@@ -11,7 +11,7 @@ import {
     CREATED_FILE,
     CREATED_STACK,
     EXITED, getCombinedTerminalName,
-    getComposeTerminalName, getContainerExecTerminalName,
+    getComposeTerminalName, getContainerTerminalName,
     getContainerLogName,
     PROGRESS_TERMINAL_ROWS,
     RUNNING, RUNNING_AND_EXITED,
@@ -502,20 +502,13 @@ export class Stack {
         terminal.start();
     }
 
-    async leaveCombinedTerminal(socket: DockgeSocket) {
-        const terminalName = getCombinedTerminalName(socket.endpoint, this.name);
-        const terminal = Terminal.getTerminal(terminalName);
-        if (terminal) {
-            terminal.leave(socket);
-        }
-    }
-
     async joinContainerTerminal(socket: DockgeSocket, serviceName: string, shell : string = "sh", index: number = 0) {
-        const terminalName = getContainerExecTerminalName(socket.endpoint, this.name, serviceName, index);
+        const terminalName = getContainerTerminalName(socket.endpoint, this.name, serviceName, shell, index);
         let terminal = Terminal.getTerminal(terminalName);
 
         if (!terminal) {
             terminal = new InteractiveTerminal(this.server, terminalName, "docker", [ "compose", "exec", serviceName, shell ], this.path);
+            terminal.enableKeepAlive = true;
             terminal.rows = TERMINAL_ROWS;
             log.debug("joinContainerTerminal", "Terminal created");
         }
@@ -530,6 +523,7 @@ export class Stack {
 
         if (!terminal) {
             terminal = new Terminal(this.server, terminalName, "docker", [ "compose", "logs", "-f", "--tail", "100", serviceName ], this.path);
+            terminal.enableKeepAlive = true;
             terminal.rows = TERMINAL_ROWS;
             log.debug("joinContainerLog", "Terminal created");
         }

@@ -124,7 +124,7 @@
     "Stopped": "Stopped",
     "Restarted": "Restarted",
     "Downed": "Downed",
-    "Switch to sh": "Switch to sh",
+    "Switch to": "Switch to",
     "terminal": "Terminal",
     "log": "Log",
     "CurrentHostname": "(Unset: Follow current hostname)",

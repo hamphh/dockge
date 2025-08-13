@@ -79,6 +79,8 @@ export class Terminal {
     }
 
     public start() {
+        log.debug("Terminal", "Terminal " + this.name + " starting");
+
         if (this._ptyProcess) {
             return;
         }
@@ -163,6 +165,8 @@ export class Terminal {
         clearInterval(this.keepAliveInterval);
         clearInterval(this.kickDisconnectedClientsInterval);
 
+        this._ptyProcess = undefined;
+
         if (this.callback) {
             this.callback(res.exitCode);
         }
@@ -173,10 +177,14 @@ export class Terminal {
     }
 
     public join(socket : DockgeSocket) {
+        log.debug("Terminal", "Terminal " + this.name + " socket " + socket.id + " joining");
+
         this.socketList[socket.id] = socket;
     }
 
     public leave(socket : DockgeSocket) {
+        log.debug("Terminal", "Terminal " + this.name + " socket " + socket.id + " leaving");
+
         delete this.socketList[socket.id];
     }
 
@@ -202,6 +210,7 @@ export class Terminal {
         clearInterval(this.keepAliveInterval);
         // Send Ctrl+C to the terminal
         this.ptyProcess?.write("\x03");
+        this.ptyProcess?.kill(undefined);
     }
 
     /**

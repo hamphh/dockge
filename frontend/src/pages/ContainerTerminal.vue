@@ -1,10 +1,12 @@
 <template>
     <transition name="slide-fade" appear>
         <div>
-            <h1 class="mb-3">{{$t("terminal")}} - {{ serviceName }} ({{ stackName }})</h1>
+            <h1 class="mb-3">{{$t("terminal")}} ({{ shell }}) - {{ serviceName }} ({{ stackName }})</h1>
 
-            <div class="mb-3">
-                <router-link :to="sh" class="btn btn-normal me-2">{{ $t("Switch to sh") }}</router-link>
+            <div class="mb-3 btn-group" role="group">
+                <router-link v-if="shell !== 'bash'" :to="bashRouteLink" class="btn btn-normal me-1">{{ $t("Switch to") + " bash" }}</router-link>
+                <router-link v-if="shell !== 'sh'" :to="shRouteLink" class="btn btn-normal me-1">{{ $t("Switch to") + " sh "}}</router-link>
+                <router-link v-if="shell !== 'zsh'" :to="zshRouteLink" class="btn btn-normal me-1">{{ $t("Switch to") + " zsh" }}</router-link>
             </div>
 
             <Terminal class="terminal" :rows="20" mode="interactive" :name="terminalName" :stack-name="stackName" :service-name="serviceName" :shell="shell" :endpoint="endpoint"></Terminal>
@@ -13,7 +15,7 @@
 </template>
 
 <script>
-import { getContainerExecTerminalName } from "../../../common/util-common";
+import { getContainerTerminalName } from "../../../common/util-common";
 
 export default {
     components: {
@@ -37,9 +39,23 @@ export default {
             return this.$route.params.serviceName;
         },
         terminalName() {
-            return getContainerExecTerminalName(this.endpoint, this.stackName, this.serviceName, 0);
+            return getContainerTerminalName(this.endpoint, this.stackName, this.serviceName, this.shell, 0);
         },
-        sh() {
+        shRouteLink() {
+            return this.shellRouteLink("sh");
+        },
+        bashRouteLink() {
+            return this.shellRouteLink("bash");
+        },
+        zshRouteLink() {
+            return this.shellRouteLink("zsh");
+        },
+    },
+    mounted() {
+        this.$root.emitAgent(this.endpoint, "joinContainerTerminal", this.stackName, this.serviceName, this.shell, (res) => {});
+    },
+    methods: {
+        shellRouteLink(shell) {
             let endpoint = this.$route.params.endpoint;
 
             let data = {
@@ -47,7 +63,7 @@ export default {
                 params: {
                     stackName: this.stackName,
                     serviceName: this.serviceName,
-                    type: "sh",
+                    type: shell,
                 },
             };
 
@@ -57,13 +73,7 @@ export default {
             }
 
             return data;
-        },
-    },
-    mounted() {
-
-    },
-    methods: {
-
+        }
     }
 };
 </script>

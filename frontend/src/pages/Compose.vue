@@ -529,10 +529,6 @@ export default {
             console.log("exitAction");
             this.stopServiceStatusTimeout = true;
             clearTimeout(serviceStatusTimeout);
-
-            // Leave Combined Terminal
-            console.debug("leaveCombinedTerminal", this.endpoint, this.stack.name);
-            this.$root.emitAgent(this.endpoint, "leaveCombinedTerminal", this.stack.name, () => {});
         },
 
         bindTerminal() {

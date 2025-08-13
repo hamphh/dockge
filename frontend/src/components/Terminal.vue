@@ -75,6 +75,8 @@ export default {
 
     },
     mounted() {
+        console.debug("Terminal " + this.name + " mounted");
+
         let cursorBlink = true;
 
         if (this.mode === "displayOnly") {
@@ -119,21 +121,16 @@ export default {
                     this.$root.toastRes(res);
                 }
             });
-        } else if (this.mode === "interactive") {
-            console.debug("Create Interactive terminal:", this.name);
-            this.$root.emitAgent(this.endpoint, "interactiveTerminal", this.stackName, this.serviceName, this.shell, (res) => {
-                if (!res.ok) {
-                    this.$root.toastRes(res);
-                }
-            });
         }
         // Fit the terminal width to the div container size after terminal is created.
         this.updateTerminalSize();
     },
 
     unmounted() {
+        console.debug("Terminal " + this.name + " unmounted");
+
         window.removeEventListener("resize", this.onResizeEvent); // Remove the resize event listener from the window object.
-        this.$root.unbindTerminal(this.name);
+        this.$root.unbindTerminal(this.endpoint, this.name);
         this.terminal.dispose();
     },
 
@@ -141,11 +138,11 @@ export default {
         bind(endpoint, name) {
             // Workaround: normally this.name should be set, but it is not sometimes, so we use the parameter, but eventually this.name and name must be the same name
             if (name) {
-                this.$root.unbindTerminal(name);
+                //this.$root.unbindTerminal(endpoint, name);
                 this.$root.bindTerminal(endpoint, name, this.terminal);
                 console.debug("Terminal bound via parameter: " + name);
             } else if (this.name) {
-                this.$root.unbindTerminal(this.name);
+                //this.$root.unbindTerminal(this.endpoint, this.name);
                 this.$root.bindTerminal(this.endpoint, this.name, this.terminal);
                 console.debug("Terminal bound: " + this.name);
             } else {
