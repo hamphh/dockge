@@ -1,11 +1,11 @@
 <template>
     <transition name="slide-fade" appear>
         <div>
-            <h1 class="mb-3">{{$t("terminal")}} ({{ shell }}) - {{ serviceName }} ({{ stackName }})</h1>
+            <h1 class="mb-3">{{ $t("terminal") }} ({{ shell }}) - {{ serviceName }} ({{ stackName }})</h1>
 
             <div class="mb-3 btn-group" role="group">
                 <router-link v-if="shell !== 'bash'" :to="bashRouteLink" class="btn btn-normal me-1">{{ $t("Switch to") + " bash" }}</router-link>
-                <router-link v-if="shell !== 'sh'" :to="shRouteLink" class="btn btn-normal me-1">{{ $t("Switch to") + " sh "}}</router-link>
+                <router-link v-if="shell !== 'sh'" :to="shRouteLink" class="btn btn-normal me-1">{{ $t("Switch to") + " sh " }}</router-link>
                 <router-link v-if="shell !== 'zsh'" :to="zshRouteLink" class="btn btn-normal me-1">{{ $t("Switch to") + " zsh" }}</router-link>
             </div>
 

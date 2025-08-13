@@ -2,7 +2,6 @@ import { DockgeServer } from "../dockge-server";
 import { callbackError, callbackResult, checkLogin, DockgeSocket, ValidationError } from "../util-server";
 import { log } from "../log";
 import { InteractiveTerminal, MainTerminal, Terminal } from "../terminal";
-import { Stack } from "../stack";
 import { AgentSocketHandler } from "../agent-socket-handler";
 import { AgentSocket } from "../../common/agent-socket";
 

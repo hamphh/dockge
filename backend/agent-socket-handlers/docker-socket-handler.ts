@@ -324,7 +324,6 @@ export class DockerSocketHandler extends AgentSocketHandler {
             }
         });
 
-
         // join service log
         agentSocket.on("joinContainerLog", async (stackName : unknown, serviceName: unknown, callback) => {
             try {
