@@ -193,7 +193,7 @@ export default defineComponent({
         },
 
         started() {
-            return this.status === "running" || this.status === "healthy" || this.status === "unhealthy";
+            return this.status === "starting" || this.status === "running" || this.status === "healthy" || this.status === "unhealthy";
         },
 
         logRouteLink() {
