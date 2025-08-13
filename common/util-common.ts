@@ -220,6 +220,10 @@ export function getContainerExecTerminalName(endpoint : string, stackName : stri
     return "container-exec-" + endpoint + "-" + stackName + "-" + container + "-" + index;
 }
 
+export function getContainerLogName(endpoint : string, stackName : string, container : string, index : number) {
+    return "container-log-" + endpoint + "-" + container;
+}
+
 export function copyYAMLComments(doc : Document, src : Document) {
     doc.comment = src.comment;
     doc.commentBefore = src.commentBefore;

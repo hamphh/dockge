@@ -296,6 +296,30 @@ export class DockerSocketHandler extends AgentSocketHandler {
             }
         });
 
+        // join service log
+        agentSocket.on("joinContainerLog", async (stackName : unknown, serviceName: unknown, callback) => {
+            try {
+                checkLogin(socket);
+
+                if (typeof(stackName) !== "string") {
+                    throw new ValidationError("Stack name must be a string");
+                }
+
+                if (typeof(serviceName) !== "string") {
+                    throw new ValidationError("Service name must be a string");
+                }
+
+                const stack = await Stack.getStack(server, stackName);
+                await stack.joinContainerLog(socket, serviceName);
+
+                callbackResult({
+                    ok: true,
+                }, callback);
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
+
         // Services status
         agentSocket.on("serviceStatusList", async (stackName : unknown, callback) => {
             try {

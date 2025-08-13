@@ -15,10 +15,12 @@
                 </div>
             </div>
             <div class="col-5 d-flex justify-content-end align-items-start">
+                <div v-if="!isEditMode" class="btn-group me-2" role="group">
+                    <router-link v-if="started" class="btn btn-normal me-1" :to="logRouteLink"><font-awesome-icon icon="file-text" /></router-link>
+                    <router-link v-if="started" class="btn btn-normal me-1" :to="terminalRouteLink"><font-awesome-icon icon="terminal" /></router-link>
+                </div>
+
                 <div v-if="!isEditMode" class="btn-group" role="group">
-                    <div v-if="started" class="btn btn-secondary me-1">
-                        <router-link :to="terminalRouteLink"><font-awesome-icon icon="terminal" /></router-link>
-                    </div>
                     <button v-if="!started" type="button" class="btn btn-success me-1" @click="startService"><font-awesome-icon icon="play" /></button>
                     <button v-if="started" type="button" class="btn btn-danger me-1" @click="stopService"><font-awesome-icon icon="stop" /></button>
                     <button v-if="started" type="button" class="btn btn-warning me-1" @click="restartService"><font-awesome-icon icon="rotate" /></button>
@@ -192,6 +194,27 @@ export default defineComponent({
 
         started() {
             return this.status === "running" || this.status === "healthy" || this.status === "unhealthy";
+        },
+
+        logRouteLink() {
+            if (this.endpoint) {
+                return {
+                    name: "containerLogEndpoint",
+                    params: {
+                        endpoint: this.endpoint,
+                        stackName: this.stackName,
+                        serviceName: this.name,
+                    },
+                };
+            } else {
+                return {
+                    name: "containerLog",
+                    params: {
+                        stackName: this.stackName,
+                        serviceName: this.name,
+                    },
+                };
+            }
         },
 
         terminalRouteLink() {

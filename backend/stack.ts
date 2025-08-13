@@ -12,6 +12,7 @@ import {
     CREATED_STACK,
     EXITED, getCombinedTerminalName,
     getComposeTerminalName, getContainerExecTerminalName,
+    getContainerLogName,
     PROGRESS_TERMINAL_ROWS,
     RUNNING, RUNNING_AND_EXITED,
     TERMINAL_ROWS, UNKNOWN
@@ -517,6 +518,20 @@ export class Stack {
             terminal = new InteractiveTerminal(this.server, terminalName, "docker", [ "compose", "exec", serviceName, shell ], this.path);
             terminal.rows = TERMINAL_ROWS;
             log.debug("joinContainerTerminal", "Terminal created");
+        }
+
+        terminal.join(socket);
+        terminal.start();
+    }
+
+    async joinContainerLog(socket: DockgeSocket, serviceName: string, index: number = 0) {
+        const terminalName = getContainerLogName(socket.endpoint, this.name, serviceName, index);
+        let terminal = Terminal.getTerminal(terminalName);
+
+        if (!terminal) {
+            terminal = new Terminal(this.server, terminalName, "docker", [ "compose", "logs", "-f", "--tail", "100", serviceName ], this.path);
+            terminal.rows = TERMINAL_ROWS;
+            log.debug("joinContainerLog", "Terminal created");
         }
 
         terminal.join(socket);
