@@ -67,7 +67,7 @@
 <script>
 import Confirm from "../components/Confirm.vue";
 import StackListItem from "../components/StackListItem.vue";
-import { CREATED_FILE, CREATED_STACK, EXITED, RUNNING, UNKNOWN } from "../../../common/util-common";
+import { CREATED_FILE, CREATED_STACK, EXITED, RUNNING, RUNNING_AND_EXITED, UNKNOWN } from "../../../common/util-common";
 
 export default {
     components: {
@@ -160,27 +160,31 @@ export default {
                     return 1;
                 }
 
+                // treat RUNNING and RUNNING_AND_EXITED the same
+                const status1 = m1.status !== RUNNING_AND_EXITED ? m1.status : RUNNING ;
+                const status2 = m2.status !== RUNNING_AND_EXITED ? m2.status : RUNNING ;
+
                 // sort by status
-                if (m1.status !== m2.status) {
-                    if (m2.status === RUNNING) {
+                if (status1 !== status2) {
+                    if (status2 === RUNNING) {
                         return 1;
-                    } else if (m1.status === RUNNING) {
+                    } else if (status1 === RUNNING) {
                         return -1;
-                    } else if (m2.status === EXITED) {
+                    } else if (status2 === EXITED) {
                         return 1;
-                    } else if (m1.status === EXITED) {
+                    } else if (status1 === EXITED) {
                         return -1;
-                    } else if (m2.status === CREATED_STACK) {
+                    } else if (status2 === CREATED_STACK) {
                         return 1;
-                    } else if (m1.status === CREATED_STACK) {
+                    } else if (status1 === CREATED_STACK) {
                         return -1;
-                    } else if (m2.status === CREATED_FILE) {
+                    } else if (status2 === CREATED_FILE) {
                         return 1;
-                    } else if (m1.status === CREATED_FILE) {
+                    } else if (status1 === CREATED_FILE) {
                         return -1;
-                    } else if (m2.status === UNKNOWN) {
+                    } else if (status2 === UNKNOWN) {
                         return 1;
-                    } else if (m1.status === UNKNOWN) {
+                    } else if (status1 === UNKNOWN) {
                         return -1;
                     }
                 }

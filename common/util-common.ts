@@ -98,7 +98,7 @@ export function statusColor(status : number) : string {
         case EXITED:
             return "danger";
         case RUNNING_AND_EXITED:
-            return "warning";
+            return "info";
         default:
             return "secondary";
     }

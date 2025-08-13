@@ -327,6 +327,10 @@ optgroup {
         background: $primary-gradient;
     }
 
+    .bg-info {
+        color: $dark-font-color2;
+    }
+
     .btn-secondary {
         color: white;
     }
@@ -334,12 +338,12 @@ optgroup {
     .btn-normal {
         $bg-color: $dark-header-bg;
 
-        color: $dark-font-color;
+        color: $dark-font-color4;
         background-color: $bg-color;
         border-color: $bg-color;
 
         &:hover {
-            $hover-color: darken($bg-color, 3%);
+            $hover-color: lighten($bg-color, 8%);
             background-color: $hover-color;
             border-color: $hover-color;
         }
