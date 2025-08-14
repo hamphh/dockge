@@ -404,6 +404,14 @@ export class DockgeServer {
             });
 
             checkVersion.startInterval();
+
+            // Start first ImageUpdateCheck 1 min. after startup, and then every 6 hours
+            setTimeout(
+                () => {
+                    this.updateAvailableStackImageUpdates(6 * 60 * 60 * 1000);
+                },
+                60 * 1000
+            );
         });
 
         gracefulShutdown(this.httpServer, {
@@ -579,6 +587,22 @@ export class DockgeServer {
         jwtSecretBean.value = generatePasswordHash(genSecret());
         await R.store(jwtSecretBean);
         return jwtSecretBean;
+    }
+
+    async updateAvailableStackImageUpdates(updatePeriod: number) {
+        const stackList = await Stack.getStackList(this, true);
+        for (const stack of stackList.values()) {
+            if (stack.isManagedByDockge) {
+                await stack.updateImageInfos();
+            }
+        }
+
+        setTimeout(
+            () => {
+                this.updateAvailableStackImageUpdates(updatePeriod);
+            },
+            updatePeriod
+        );
     }
 
     /**

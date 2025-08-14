@@ -20,11 +20,13 @@ import {
 import { InteractiveTerminal, Terminal } from "./terminal";
 import childProcessAsync from "promisify-child-process";
 import { Settings } from "./settings";
+import { ImageRepository } from "./image-repository";
 
 export class Stack {
 
     name: string;
     protected _status: number = UNKNOWN;
+    protected _imageUpdatesAvailable: boolean = false;
     protected _composeYAML?: string;
     protected _composeENV?: string;
     protected _configFilePath?: string;
@@ -35,11 +37,15 @@ export class Stack {
 
     protected static managedStackList: Map<string, Stack> = new Map();
 
+    protected static imageRepository : ImageRepository = new ImageRepository();
+
     constructor(server : DockgeServer, name : string, composeYAML? : string, composeENV? : string, skipFSOperations = false) {
         this.name = name;
         this.server = server;
         this._composeYAML = composeYAML;
         this._composeENV = composeENV;
+
+        this._imageUpdatesAvailable = Stack.imageRepository.isStackUpdateAvailable(name);
 
         if (!skipFSOperations) {
             // Check if compose file name is different from compose.yaml
@@ -83,6 +89,7 @@ export class Stack {
         return {
             name: this.name,
             status: this._status,
+            imageUpdatesAvailable: this._imageUpdatesAvailable,
             tags: [],
             isManagedByDockge: this.isManagedByDockge,
             composeFileName: this._composeFileName,
@@ -240,6 +247,21 @@ export class Stack {
             this._status = status;
         } else {
             this._status = UNKNOWN;
+        }
+    }
+
+    async updateImageInfos() {
+        this._imageUpdatesAvailable = false;
+        const serviceInfos = await this.getServiceStatusList() as Map<string, {Image: string, Service: string}>;
+
+        try {
+            for (const serviceInfo of serviceInfos.values()) {
+                await Stack.imageRepository.update(this.name, serviceInfo.Image);
+            }
+
+            this._imageUpdatesAvailable = Stack.imageRepository.isStackUpdateAvailable(this.name);
+        } catch (e) {
+            log.error("updateImageInfos", e);
         }
     }
 
@@ -532,11 +554,11 @@ export class Stack {
         terminal.start();
     }
 
-    async getServiceStatusJsonList() {
-        let statusList = new Map<string, string>();
+    async getServiceStatusList() {
+        let statusList = new Map<string, object>();
 
         try {
-            let res = await childProcessAsync.spawn("docker", [ "compose", "ps", "--format", "json" ], {
+            const res = await childProcessAsync.spawn("docker", [ "compose", "ps", "--format", "json" ], {
                 cwd: this.path,
                 encoding: "utf-8",
             });
@@ -545,13 +567,15 @@ export class Stack {
                 return statusList;
             }
 
-            let lines = res.stdout?.toString().split("\n");
+            const lines = res.stdout?.toString().split("\n");
 
             for (let line of lines) {
-                try {
-                    let obj = JSON.parse(line);
-                    statusList.set(obj.Service, line);
-                } catch (e) {
+                if (line != "") {
+                    const serviceInfo = JSON.parse(line);
+                    statusList.set(serviceInfo.Service, {
+                        ...serviceInfo,
+                        ImageUpdateAvailable: Stack.imageRepository.isImageUpdateAvailable(serviceInfo.Image)
+                    });
                 }
             }
 

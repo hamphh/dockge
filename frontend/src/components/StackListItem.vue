@@ -2,7 +2,8 @@
     <router-link :to="url" :class="{ 'dim' : !stack.isManagedByDockge }" class="item">
         <Uptime :stack="stack" :fixed-width="true" class="me-2" />
         <div class="title">
-            <span>{{ stackName }}</span>
+            <span class="me-2">{{ stackName }}</span>
+            <font-awesome-icon v-if="stack.imageUpdatesAvailable" icon="arrow-alt-circle-up" class="text-warning" />
             <div v-if="$root.agentCount > 1" class="endpoint">{{ endpointDisplay }}</div>
         </div>
     </router-link>

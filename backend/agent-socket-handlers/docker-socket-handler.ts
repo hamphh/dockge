@@ -369,7 +369,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
         });
 
         // Services status
-        agentSocket.on("serviceStatusJsonList", async (stackName : unknown, callback) => {
+        agentSocket.on("serviceStatusList", async (stackName : unknown, callback) => {
             try {
                 checkLogin(socket);
 
@@ -378,10 +378,10 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 }
 
                 const stack = await Stack.getStack(server, stackName, true);
-                const serviceStatusJsonList = Object.fromEntries(await stack.getServiceStatusJsonList());
+                const serviceStatusList = Object.fromEntries(await stack.getServiceStatusList());
                 callbackResult({
                     ok: true,
-                    serviceStatusJsonList: serviceStatusJsonList,
+                    serviceStatusList: serviceStatusList,
                 }, callback);
             } catch (e) {
                 callbackError(e, callback);

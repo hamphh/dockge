@@ -306,7 +306,7 @@ export default {
             stack: {
 
             },
-            serviceStatusJsonList: {},
+            serviceStatusList: {},
             isEditMode: false,
             submitted: false,
             showDeleteDialog: false,
@@ -501,9 +501,9 @@ export default {
                 return;
             }
 
-            this.$root.emitAgent(this.endpoint, "serviceStatusJsonList", this.stack.name, (res) => {
+            this.$root.emitAgent(this.endpoint, "serviceStatusList", this.stack.name, (res) => {
                 if (res.ok) {
-                    this.serviceStatusJsonList = res.serviceStatusJsonList;
+                    this.serviceStatusList = res.serviceStatusList;
                 }
                 if (!this.stopServiceStatusTimeout) {
                     this.startServiceStatusTimeout();
@@ -512,13 +512,7 @@ export default {
         },
 
         getServiceStatus(serviceName) {
-            const serviceStatusJson = this.serviceStatusJsonList[serviceName];
-
-            if (serviceStatusJson) {
-                return JSON.parse(serviceStatusJson);
-            } else {
-                return undefined;
-            }
+            return this.serviceStatusList[serviceName];
         },
 
         exitConfirm(next) {
