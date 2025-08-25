@@ -596,6 +596,7 @@ export class DockgeServer {
                 await stack.updateImageInfos();
             }
         }
+        log.info("checkImageUpdates", "Check for image updates finished.");
 
         setTimeout(
             () => {

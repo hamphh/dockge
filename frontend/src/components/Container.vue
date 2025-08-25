@@ -2,7 +2,7 @@
     <div class="shadow-box big-padding mb-3 container">
         <div class="row">
             <div class="col-7">
-                <h4>{{ name }} <font-awesome-icon v-if="imageUpdateAvailable" icon="arrow-alt-circle-up" class="text-warning" /></h4>
+                <h4>{{ name }} <font-awesome-icon v-if="started && imageUpdateAvailable" icon="arrow-alt-circle-up" class="text-warning" /></h4>
                 <div class="image mb-2">
                     <span class="me-1">{{ imageName }}:</span><span class="tag">{{ imageTag }}</span>
                 </div>

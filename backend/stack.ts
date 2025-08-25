@@ -13,7 +13,6 @@ import {
     EXITED, getCombinedTerminalName,
     getComposeTerminalName, getContainerTerminalName,
     getContainerLogName,
-    PROGRESS_TERMINAL_ROWS,
     RUNNING, RUNNING_AND_EXITED,
     TERMINAL_ROWS, UNKNOWN
 } from "../common/util-common";
@@ -26,7 +25,6 @@ export class Stack {
 
     name: string;
     protected _status: number = UNKNOWN;
-    protected _imageUpdatesAvailable: boolean = false;
     protected _composeYAML?: string;
     protected _composeENV?: string;
     protected _configFilePath?: string;
@@ -44,8 +42,6 @@ export class Stack {
         this.server = server;
         this._composeYAML = composeYAML;
         this._composeENV = composeENV;
-
-        this._imageUpdatesAvailable = Stack.imageRepository.isStackUpdateAvailable(name);
 
         if (!skipFSOperations) {
             // Check if compose file name is different from compose.yaml
@@ -89,7 +85,8 @@ export class Stack {
         return {
             name: this.name,
             status: this._status,
-            imageUpdatesAvailable: this._imageUpdatesAvailable,
+            started: this._status == RUNNING || this._status == RUNNING_AND_EXITED,
+            imageUpdatesAvailable: Stack.imageRepository.isStackUpdateAvailable(this.name),
             tags: [],
             isManagedByDockge: this.isManagedByDockge,
             composeFileName: this._composeFileName,
@@ -220,6 +217,10 @@ export class Stack {
         if (exitCode !== 0) {
             throw new Error("Failed to deploy, please check the terminal output for more information.");
         }
+
+        // Update image infos
+        this.updateImageInfos();
+
         return exitCode;
     }
 
@@ -251,17 +252,15 @@ export class Stack {
     }
 
     async updateImageInfos() {
-        this._imageUpdatesAvailable = false;
         const serviceInfos = await this.getServiceStatusList() as Map<string, {Image: string, Service: string}>;
 
-        try {
-            for (const serviceInfo of serviceInfos.values()) {
+        Stack.imageRepository.resetStack(this.name);
+        for (const serviceInfo of serviceInfos.values()) {
+            try {
                 await Stack.imageRepository.update(this.name, serviceInfo.Image);
+            } catch (e) {
+                log.error("updateImageInfos", "Image '" + serviceInfo.Image + "': " + e);
             }
-
-            this._imageUpdatesAvailable = Stack.imageRepository.isStackUpdateAvailable(this.name);
-        } catch (e) {
-            log.error("updateImageInfos", e);
         }
     }
 
@@ -436,6 +435,10 @@ export class Stack {
         if (exitCode !== 0) {
             throw new Error("Failed to start, please check the terminal output for more information.");
         }
+
+        // Update image infos
+        this.updateImageInfos();
+
         return exitCode;
     }
 
@@ -454,6 +457,10 @@ export class Stack {
         if (exitCode !== 0) {
             throw new Error("Failed to restart, please check the terminal output for more information.");
         }
+
+        // Update image infos
+        this.updateImageInfos();
+
         return exitCode;
     }
 
@@ -472,6 +479,10 @@ export class Stack {
         if (exitCode !== 0) {
             throw new Error("Failed to start service, please check the terminal output for more information.");
         }
+
+        // Update image infos
+        this.updateImageInfos();
+
         return exitCode;
     }
 
@@ -481,6 +492,10 @@ export class Stack {
         if (exitCode !== 0) {
             throw new Error("Failed to restart service, please check the terminal output for more information.");
         }
+
+        // Update image infos
+        this.updateImageInfos();
+
         return exitCode;
     }
 
@@ -503,7 +518,7 @@ export class Stack {
         // If the stack is not running, we don't need to restart it
         await this.updateStatus();
         log.debug("update", "Status: " + this.status);
-        if (this.status !== RUNNING) {
+        if (this.status !== RUNNING && this.status !== RUNNING_AND_EXITED) {
             return exitCode;
         }
 
@@ -511,6 +526,10 @@ export class Stack {
         if (exitCode !== 0) {
             throw new Error("Failed to restart, please check the terminal output for more information.");
         }
+
+        // Update image infos
+        this.updateImageInfos();
+
         return exitCode;
     }
 

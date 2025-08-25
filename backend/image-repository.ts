@@ -10,6 +10,10 @@ export class ImageRepository {
         this.stacksWithUpdate.delete(stack);
     }
 
+    resetImage(image: string) {
+        this.imagesWithUpdate.delete(image);
+    }
+
     async update(stack: string, image: string) {
         this.imagesWithUpdate.delete(image);
 
@@ -25,16 +29,13 @@ export class ImageRepository {
         }
 
         // remote
-        const resRemote = await childProcessAsync.spawn("docker", [ "buildx", "imagetools", "inspect", "--format", "{{json .Manifest}}", image ], {
+        const resRemote = await childProcessAsync.spawn("skopeo", [ "inspect", "--no-tags", "--format", "{{ .Digest }}", "docker://" + image ], {
             encoding: "utf-8",
         });
 
         let remoteDigest = "";
         if (resRemote.stdout) {
-            const remoteObj = JSON.parse(resRemote.stdout?.toString());
-            if (remoteObj) {
-                remoteDigest = remoteObj.digest.trim();
-            }
+            remoteDigest = resRemote.stdout?.toString().trim();
         }
 
         if (localDigest != "" && remoteDigest != "" && localDigest != remoteDigest) {
