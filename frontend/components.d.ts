@@ -11,11 +11,8 @@ declare module 'vue' {
     Appearance: typeof import('./src/components/settings/Appearance.vue')['default']
     ArrayInput: typeof import('./src/components/ArrayInput.vue')['default']
     ArraySelect: typeof import('./src/components/ArraySelect.vue')['default']
-    BButton: typeof import('bootstrap-vue-next')['BButton']
     BDropdown: typeof import('bootstrap-vue-next')['BDropdown']
     BDropdownItem: typeof import('bootstrap-vue-next')['BDropdownItem']
-    BFormGroup: typeof import('bootstrap-vue-next')['BFormGroup']
-    BFormInput: typeof import('bootstrap-vue-next')['BFormInput']
     BModal: typeof import('bootstrap-vue-next')['BModal']
     Confirm: typeof import('./src/components/Confirm.vue')['default']
     Container: typeof import('./src/components/Container.vue')['default']
@@ -30,9 +27,7 @@ declare module 'vue' {
     StackListItem: typeof import('./src/components/StackListItem.vue')['default']
     Terminal: typeof import('./src/components/Terminal.vue')['default']
     TwoFADialog: typeof import('./src/components/TwoFADialog.vue')['default']
+    Update: typeof import('./src/components/Update.vue')['default']
     Uptime: typeof import('./src/components/Uptime.vue')['default']
-  }
-  export interface ComponentCustomProperties {
-    vBModal: typeof import('bootstrap-vue-next')['vBModal']
   }
 }

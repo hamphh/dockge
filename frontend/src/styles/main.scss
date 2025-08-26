@@ -329,6 +329,11 @@ optgroup {
 
     .bg-info {
         color: $dark-font-color2;
+        background-color: $info-background !important;
+    }
+
+    .text-info {
+        color: $info-background !important;
     }
 
     .btn-secondary {

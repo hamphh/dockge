@@ -3,7 +3,7 @@
         <Uptime :stack="stack" :fixed-width="true" class="me-2" />
         <div class="title">
             <span class="me-2">{{ stackName }}</span>
-            <font-awesome-icon v-if="stack.started && stack.imageUpdatesAvailable" icon="arrow-alt-circle-up" class="text-warning" />
+            <Update :update-available="stack.started && stack.imageUpdatesAvailable" />
             <div v-if="$root.agentCount > 1" class="endpoint">{{ endpointDisplay }}</div>
         </div>
     </router-link>
