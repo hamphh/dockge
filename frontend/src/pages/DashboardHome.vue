@@ -56,7 +56,7 @@
                             </template>
 
                             <!-- Edit Name  -->
-                            <font-awesome-icon icon="pen-to-square" @click="showEditAgentNameDialog[agent.name] = !showEditAgentNameDialog[agent.Name]" />
+                            <font-awesome-icon v-if="endpoint !== ''" class="edit-agent" icon="pen-to-square" @click="showEditAgentNameDialog[agent.name] = !showEditAgentNameDialog[agent.Name]" />
 
                             <!-- Edit Dialog -->
                             <BModal v-model="showEditAgentNameDialog[agent.name]" :no-close-on-backdrop="true" :close-on-esc="true" :okTitle="$t('Update Name')" okVariant="info" @ok="updateName(agent.url, agent.updatedName)">
@@ -370,6 +370,11 @@ table {
 }
 
 .remove-agent {
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.edit-agent {
     cursor: pointer;
     color: rgba(255, 255, 255, 0.3);
 }

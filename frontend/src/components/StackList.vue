@@ -53,7 +53,7 @@
                         <font-awesome-icon v-show="!closedAgents.get(agent.endpoint)" icon="chevron-circle-down" />
                     </span>
                     <span v-if="agent.endpoint === 'current'">{{ $t("currentEndpoint") }}</span>
-                    <span v-else>{{ agent.endpoint }}</span>
+                    <span v-else>{{ endpointDisplay(agent.endpoint) }}</span>
                 </div>
                 <StackListItem v-show="$root.agentCount === 1 || !closedAgents.get(agent.endpoint)"
                     v-for="(item, index) in agent.stacks" :key="index" :stack="item" :isSelectMode="selectMode"
@@ -377,6 +377,10 @@ export default {
 
             this.cancelSelectMode();
         },
+
+        endpointDisplay(endpoint) {
+            return this.$root.endpointDisplayFunction(endpoint);
+        }
     },
 };
 </script>
