@@ -15,10 +15,16 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": ".devcontainer/setup.sh",
+	"postCreateCommand": "chmod +x .devcontainer/setup.sh && .devcontainer/setup.sh",
 
 	// Configure tool-specific properties.
-	// "customizations": {},
+	"customizations": {
+    	"vscode": {
+      		"extensions": [
+				"vue.volar"
+      		]
+    	}
+  	},
 
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
