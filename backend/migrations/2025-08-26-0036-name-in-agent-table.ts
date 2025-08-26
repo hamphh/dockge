@@ -2,7 +2,7 @@ import { Knex } from "knex";
 
 export function up(knex: Knex) {
     return knex.schema.table("agent", function (table) {
-        table.string("name");
+        table.string("name").defaultTo("");
     });
 }
 
