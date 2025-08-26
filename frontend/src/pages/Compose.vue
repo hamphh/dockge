@@ -23,33 +23,33 @@
 
                     <button v-if="!isEditMode" class="btn btn-secondary" :disabled="processing" @click="enableEditMode">
                         <font-awesome-icon icon="pen" class="me-1" />
-                        {{ $t("editStack") }}
+                        <span class="d-none d-xl-inline">{{ $t("editStack") }}</span>
                     </button>
 
                     <button v-if="!isEditMode && exited" class="btn btn-primary" :disabled="processing" @click="startStack">
                         <font-awesome-icon icon="play" class="me-1" />
-                        {{ $t("startStack") }}
+                        <span class="d-none d-xl-inline">{{ $t("startStack") }}</span>
                     </button>
 
                     <button v-if="!isEditMode && active" class="btn btn-normal " :disabled="processing" @click="restartStack">
                         <font-awesome-icon icon="rotate" class="me-1" />
-                        {{ $t("restartStack") }}
+                        <span class="d-none d-xl-inline">{{ $t("restartStack") }}</span>
                     </button>
 
                     <button v-if="!isEditMode" class="btn btn-normal" :disabled="processing" @click="updateStack">
                         <font-awesome-icon icon="cloud-arrow-down" class="me-1" />
-                        {{ $t("updateStack") }}
+                        <span class="d-none d-xl-inline">{{ $t("updateStack") }}</span>
                     </button>
 
                     <button v-if="!isEditMode && active" class="btn btn-normal" :disabled="processing" @click="stopStack">
                         <font-awesome-icon icon="stop" class="me-1" />
-                        {{ $t("stopStack") }}
+                        <span class="d-none d-xl-inline">{{ $t("stopStack") }}</span>
                     </button>
 
                     <BDropdown right text="" variant="normal">
                         <BDropdownItem @click="downStack">
                             <font-awesome-icon icon="stop" class="me-1" />
-                            {{ $t("downStack") }}
+                            <span class="d-none d-xl-inline">{{ $t("downStack") }}</span>
                         </BDropdownItem>
                     </BDropdown>
                 </div>
@@ -57,7 +57,7 @@
                 <button v-if="isEditMode && !isAdd" class="btn btn-normal" :disabled="processing" @click="discardStack">{{ $t("discardStack") }}</button>
                 <button v-if="!isEditMode" class="btn btn-danger" :disabled="processing" @click="showDeleteDialog = !showDeleteDialog">
                     <font-awesome-icon icon="trash" class="me-1" />
-                    {{ $t("deleteStack") }}
+                    <span class="d-none d-xl-inline">{{ $t("deleteStack") }}</span>
                 </button>
             </div>
 

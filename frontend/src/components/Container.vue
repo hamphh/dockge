@@ -1,20 +1,13 @@
 <template>
     <div class="shadow-box big-padding mb-3 container">
         <div class="row">
-            <div class="col-7">
-                <h4>{{ name }}  <Update :update-available="started && imageUpdateAvailable" /></h4>
+            <div class="col-12 col-xxl-7">
+                <h4>{{ name }} <Update :update-available="started && imageUpdateAvailable" /></h4>
                 <div class="image mb-2">
                     <span class="me-1">{{ imageName }}:</span><span class="tag">{{ imageTag }}</span>
                 </div>
-                <div v-if="!isEditMode">
-                    <span class="badge me-1" :class="bgStyle">{{ status }}</span>
-
-                    <a v-for="port in envsubstService.ports" :key="port" :href="parsePort(port).url" target="_blank">
-                        <span class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
-                    </a>
-                </div>
             </div>
-            <div class="col-5 d-flex justify-content-end align-items-start">
+            <div class="col-12 col-xxl-5 mb-2 d-flex justify-content-xxl-end align-items-start">
                 <div v-if="!isEditMode" class="btn-group me-2" role="group">
                     <router-link v-if="started" class="btn btn-normal me-1" :to="logRouteLink"><font-awesome-icon icon="file-text" /></router-link>
                     <router-link v-if="started" class="btn btn-normal me-1" :to="inspectRouteLink"><font-awesome-icon icon="info-circle" /></router-link>
@@ -26,6 +19,15 @@
                     <button v-if="started" type="button" class="btn btn-danger me-1" @click="stopService"><font-awesome-icon icon="stop" /></button>
                     <button v-if="started" type="button" class="btn btn-warning me-1" @click="restartService"><font-awesome-icon icon="rotate" /></button>
                 </div>
+            </div>
+        </div>
+        <div v-if="!isEditMode" class="row">
+            <div class="col">
+                <span class="badge me-1" :class="bgStyle">{{ status }}</span>
+
+                <a v-for="port in envsubstService.ports" :key="port" :href="parsePort(port).url" target="_blank">
+                    <span class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
+                </a>
             </div>
         </div>
 
