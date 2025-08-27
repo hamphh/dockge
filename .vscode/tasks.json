@@ -51,7 +51,7 @@
         {
             "label": "Build & Push Image",
             "type": "shell",
-            "command": "npm run build:frontend && docker build --platform linux/amd64,linux/arm/v7 -f ${workspaceFolder}/docker/Dockerfile -t ${input:repo}/dockge ${workspaceFolder} && docker push ${input:repo}/dockge",
+            "command": "npm run build:frontend && docker build --platform linux/amd64,linux/arm/v7 -f ${workspaceFolder}/docker/Dockerfile -t ${input:imagename} ${workspaceFolder} && docker push ${input:imagename}",
             "problemMatcher": [],
             "presentation": {
                 "echo": true,
@@ -65,7 +65,7 @@
         {
            "label": "Build Base Image",
             "type": "shell",
-            "command": "docker build --platform linux/amd64,linux/arm/v7 -f ${workspaceFolder}/docker/Base.Dockerfile -t ${input:repo}/dockge:base ${workspaceFolder}",
+            "command": "docker build --platform linux/amd64,linux/arm/v7 -f ${workspaceFolder}/docker/Base.Dockerfile -t ${input:baseimagename} ${workspaceFolder}",
             "problemMatcher": [],
             "presentation": {
                 "echo": true,
@@ -79,9 +79,14 @@
     ],
     "inputs": [
         {
-        "id": "repo",
+        "id": "imagename",
         "type": "promptString",
-        "description": "Enter a Docker repo for the image"
+        "description": "Enter the image name with optionally a tag"
+        },
+        {
+        "id": "baseimagename",
+        "type": "promptString",
+        "description": "Enter the base image name with optionally a tag"
         }
   ]
 }
