@@ -378,7 +378,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 }
 
                 const stack = await Stack.getStack(server, stackName);
-                await stack.updateProperties();
+                await stack.updateProperties(true);
                 callbackResult({
                     ok: true,
                     serviceProperties: Object.fromEntries(stack.serviceProperties),

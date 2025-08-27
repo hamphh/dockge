@@ -234,11 +234,30 @@ export class Stack {
         return exitCode;
     }
 
-    async updateProperties() {
+    async updateProperties(includeStats: boolean = false) {
         const serviceProperties = new Map<string, object>();
         this._unhealthy = false;
 
         try {
+            const serviceStats = new Map<string, object>();
+            if (includeStats) {
+                const statsRes = await childProcessAsync.spawn("docker", [ "compose", "stats", "--no-stream", "--format", "json" ], {
+                    cwd: this.path,
+                    encoding: "utf-8",
+                });
+
+                if (statsRes.stdout) {
+                    const statsLines = statsRes.stdout?.toString().split("\n");
+
+                    for (let statsLine of statsLines) {
+                        if (statsLine != "") {
+                            const stats = JSON.parse(statsLine);
+                            serviceStats.set(stats.Name, stats);
+                        }
+                    }
+                }
+            }
+
             const res = await childProcessAsync.spawn("docker", [ "compose", "ps", "--all", "--format", "json" ], {
                 cwd: this.path,
                 encoding: "utf-8",
@@ -258,7 +277,8 @@ export class Stack {
                     const serviceInfo = JSON.parse(line);
                     serviceProperties.set(serviceInfo.Service, {
                         ...serviceInfo,
-                        ImageUpdateAvailable: Stack.imageRepository.isImageUpdateAvailable(serviceInfo.Image)
+                        ImageUpdateAvailable: Stack.imageRepository.isImageUpdateAvailable(serviceInfo.Image),
+                        Stats: serviceStats.get(serviceInfo.Name)
                     });
 
                     if (serviceInfo.State === "running") {

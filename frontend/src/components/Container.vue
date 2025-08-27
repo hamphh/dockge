@@ -30,6 +30,28 @@
                 </a>
             </div>
         </div>
+        <div v-if="!isEditMode && statsAvailable" class="mt-2">
+            <div class="d-flex align-items-center gap-3">
+                <template v-if="!expandedStats">
+                    <div class="stats">
+                        {{ $t('CPU') }}: {{ serviceProperties.Stats.CPUPerc }}
+                    </div>
+                    <div class="stats">
+                        {{ $t('memoryAbbreviated') }}: {{ serviceProperties.Stats.MemUsage }}
+                    </div>
+                </template>
+                <div class="d-flex flex-grow-1 justify-content-end">
+                    <button class="btn btn-sm btn-normal" @click="expandedStats = !expandedStats">
+                        <font-awesome-icon :icon="expandedStats ? 'chevron-up' : 'chevron-down'" />
+                    </button>
+                </div>
+            </div>
+            <transition name="slide-fade" appear>
+                <div v-if="expandedStats" class="d-flex flex-column gap-3 mt-2">
+                    <DockerStats :stats="serviceProperties.Stats" />
+                </div>
+            </transition>
+        </div>
 
         <div v-if="isEditMode" class="mt-2">
             <button class="btn btn-normal me-2" @click="showConfig = !showConfig">
@@ -173,6 +195,7 @@ export default defineComponent({
     data() {
         return {
             showConfig: false,
+            expandedStats: false,
         };
     },
     computed: {
@@ -339,6 +362,10 @@ export default defineComponent({
                 return "";
             }
         },
+
+        statsAvailable() {
+            return this.serviceProperties && this.serviceProperties.Stats;
+        }
     },
     mounted() {
         if (this.first) {
@@ -395,6 +422,11 @@ export default defineComponent({
         width: 100%;
         align-items: center;
         justify-content: end;
+    }
+
+    .stats {
+        font-size: 0.8rem;
+        color: #6c757d;
     }
 }
 </style>

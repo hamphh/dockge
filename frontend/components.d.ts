@@ -16,6 +16,7 @@ declare module 'vue' {
     BModal: typeof import('bootstrap-vue-next')['BModal']
     Confirm: typeof import('./src/components/Confirm.vue')['default']
     Container: typeof import('./src/components/Container.vue')['default']
+    DockerStats: typeof import('./src/components/DockerStats.vue')['default']
     General: typeof import('./src/components/settings/General.vue')['default']
     HiddenInput: typeof import('./src/components/HiddenInput.vue')['default']
     Login: typeof import('./src/components/Login.vue')['default']
