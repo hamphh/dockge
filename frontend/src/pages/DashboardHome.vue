@@ -11,15 +11,23 @@
                     <!-- Stats -->
                     <div class="shadow-box big-padding text-center mb-4">
                         <div class="row">
-                            <div class="col">
+                            <div v-if="activeNum > 0" class="col">
                                 <h3>{{ $t("active") }}</h3>
                                 <span class="num active">{{ activeNum }}</span>
                             </div>
-                            <div class="col">
+                            <div v-if="partiallyNum > 0" class="col">
+                                <h3>{{ $t("partially") }}</h3>
+                                <span class="num partially">{{ partiallyNum }}</span>
+                            </div>
+                            <div v-if="unhealthyNum > 0" class="col">
+                                <h3>{{ $t("unhealthy") }}</h3>
+                                <span class="num unhealthy">{{ unhealthyNum }}</span>
+                            </div>
+                            <div v-if="exitedNum > 0" class="col">
                                 <h3>{{ $t("exited") }}</h3>
                                 <span class="num exited">{{ exitedNum }}</span>
                             </div>
-                            <div class="col">
+                            <div v-if="inactiveNum > 0" class="col">
                                 <h3>{{ $t("inactive") }}</h3>
                                 <span class="num inactive">{{ inactiveNum }}</span>
                             </div>
@@ -153,6 +161,12 @@ export default {
     computed: {
         activeNum() {
             return this.getStatusNum("active");
+        },
+        partiallyNum() {
+            return this.getStatusNum("partially");
+        },
+        unhealthyNum() {
+            return this.getStatusNum("unhealthy");
         },
         inactiveNum() {
             return this.getStatusNum("inactive");
@@ -334,6 +348,14 @@ export default {
 
     &.active {
         color: $primary;
+    }
+
+    &.partially {
+        color: $info
+    }
+
+    &.unhealthy {
+        color: $danger
     }
 
     &.exited {

@@ -128,7 +128,7 @@
                             :name="name"
                             :is-edit-mode="isEditMode"
                             :first="name === Object.keys(jsonConfig.services)[0]"
-                            :statusObj="getServiceStatus(name)"
+                            :serviceProperties="getServiceProperties(name)"
                         />
                     </div>
 
@@ -271,7 +271,7 @@ const envDefault = "# VARIABLE=value #comment";
 
 let yamlErrorTimeout = null;
 
-let serviceStatusTimeout = null;
+let servicePropertiesTimeout = null;
 let prismjsSymbolDefinition = {
     "symbol": {
         pattern: /(?<!\$)\$(\{[^{}]*\}|\w+)/,
@@ -306,12 +306,12 @@ export default {
             stack: {
 
             },
-            serviceStatusList: {},
+            serviceProperties: {},
             isEditMode: false,
             submitted: false,
             showDeleteDialog: false,
             newContainerName: "",
-            stopServiceStatusTimeout: false,
+            stopServicePropertiesTimeout: false,
         };
     },
     computed: {
@@ -482,37 +482,37 @@ export default {
             this.loadStack();
         }
 
-        this.requestServiceStatus();
+        this.requestServicePoperties();
     },
     unmounted() {
 
     },
     methods: {
-        startServiceStatusTimeout() {
-            clearTimeout(serviceStatusTimeout);
-            serviceStatusTimeout = setTimeout(async () => {
-                this.requestServiceStatus();
+        startServicePropertiesTimeout() {
+            clearTimeout(servicePropertiesTimeout);
+            servicePropertiesTimeout = setTimeout(async () => {
+                this.requestServicePoperties();
             }, 5000);
         },
 
-        requestServiceStatus() {
+        requestServicePoperties() {
             // Do not request if it is add mode
             if (this.isAdd) {
                 return;
             }
 
-            this.$root.emitAgent(this.endpoint, "serviceStatusList", this.stack.name, (res) => {
+            this.$root.emitAgent(this.endpoint, "serviceProperties", this.stack.name, (res) => {
                 if (res.ok) {
-                    this.serviceStatusList = res.serviceStatusList;
+                    this.serviceProperties = res.serviceProperties;
                 }
-                if (!this.stopServiceStatusTimeout) {
-                    this.startServiceStatusTimeout();
+                if (!this.stopServicePropertiesTimeout) {
+                    this.startServicePropertiesTimeout();
                 }
             });
         },
 
-        getServiceStatus(serviceName) {
-            return this.serviceStatusList[serviceName];
+        getServiceProperties(serviceName) {
+            return this.serviceProperties[serviceName];
         },
 
         exitConfirm(next) {
@@ -531,8 +531,8 @@ export default {
 
         exitAction() {
             console.log("exitAction");
-            this.stopServiceStatusTimeout = true;
-            clearTimeout(serviceStatusTimeout);
+            this.stopServicePropertiesTimeout = true;
+            clearTimeout(servicePropertiesTimeout);
         },
 
         bindTerminal() {

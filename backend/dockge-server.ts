@@ -320,11 +320,13 @@ export class DockgeServer {
 
         });
 
+        /**
         if (isDev) {
             setInterval(() => {
                 log.debug("terminal", "Terminal count: " + Terminal.getTerminalCount());
             }, 5000);
         }
+        */
     }
 
     async afterLogin(socket : DockgeSocket, user : User) {
@@ -404,6 +406,14 @@ export class DockgeServer {
             });
 
             checkVersion.startInterval();
+
+            // Update stack properties every 5 Minutes
+            setTimeout(
+                () => {
+                    this.updateStackProperties(5 * 60 * 1000);
+                },
+                5 * 60 * 1000
+            );
 
             // Start first ImageUpdateCheck 1 min. after startup, and then every 6 hours
             setTimeout(
@@ -604,6 +614,15 @@ export class DockgeServer {
             },
             updatePeriod
         );
+    }
+
+    async updateStackProperties(updatePeriod: number) {
+        const stackList = await Stack.getStackList(this, true);
+        for (const stack of stackList.values()) {
+            if (stack.isManagedByDockge) {
+                await stack.updateProperties();
+            }
+        }
     }
 
     /**

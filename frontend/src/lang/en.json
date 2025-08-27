@@ -87,6 +87,7 @@
     "partially": "active⁻",
     "exited": "exited",
     "inactive": "inactive",
+    "unhealthy": "unhealthy",
     "Appearance": "Appearance",
     "Security": "Security",
     "About": "About",

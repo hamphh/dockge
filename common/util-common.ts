@@ -52,6 +52,7 @@ export const CREATED_STACK = 2;
 export const RUNNING = 3;
 export const EXITED = 4;
 export const RUNNING_AND_EXITED = 5;
+export const UNHEALTHY = 6;
 
 export function statusName(status : number) : string {
     switch (status) {
@@ -65,6 +66,8 @@ export function statusName(status : number) : string {
             return "exited";
         case RUNNING_AND_EXITED:
             return "partially";
+        case UNHEALTHY:
+            return "unhealthy";
         default:
             return "unknown";
     }
@@ -82,6 +85,8 @@ export function statusNameShort(status : number) : string {
             return "exited";
         case RUNNING_AND_EXITED:
             return "partially";
+        case UNHEALTHY:
+            return "unhealthy";
         default:
             return "?";
     }
@@ -99,6 +104,8 @@ export function statusColor(status : number) : string {
             return "danger";
         case RUNNING_AND_EXITED:
             return "info";
+        case UNHEALTHY:
+            return "danger";
         default:
             return "secondary";
     }

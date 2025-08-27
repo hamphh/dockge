@@ -369,7 +369,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
         });
 
         // Services status
-        agentSocket.on("serviceStatusList", async (stackName : unknown, callback) => {
+        agentSocket.on("serviceProperties", async (stackName : unknown, callback) => {
             try {
                 checkLogin(socket);
 
@@ -377,11 +377,11 @@ export class DockerSocketHandler extends AgentSocketHandler {
                     throw new ValidationError("Stack name must be a string");
                 }
 
-                const stack = await Stack.getStack(server, stackName, true);
-                const serviceStatusList = Object.fromEntries(await stack.getServiceStatusList());
+                const stack = await Stack.getStack(server, stackName);
+                await stack.updateProperties();
                 callbackResult({
                     ok: true,
-                    serviceStatusList: serviceStatusList,
+                    serviceProperties: Object.fromEntries(stack.serviceProperties),
                 }, callback);
             } catch (e) {
                 callbackError(e, callback);
@@ -418,7 +418,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
             throw new ValidationError("isAdd must be a boolean");
         }
 
-        const stack = new Stack(server, name, composeYAML, composeENV, false);
+        const stack = new Stack(server, name, composeYAML, composeENV);
         await stack.save(isAdd);
         return stack;
     }

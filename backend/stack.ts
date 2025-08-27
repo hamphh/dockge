@@ -13,7 +13,7 @@ import {
     EXITED, getCombinedTerminalName,
     getComposeTerminalName, getContainerTerminalName,
     getContainerLogName,
-    RUNNING, RUNNING_AND_EXITED,
+    RUNNING, RUNNING_AND_EXITED, UNHEALTHY,
     TERMINAL_ROWS, UNKNOWN
 } from "../common/util-common";
 import { InteractiveTerminal, Terminal } from "./terminal";
@@ -29,6 +29,8 @@ export class Stack {
     protected _composeENV?: string;
     protected _configFilePath?: string;
     protected _composeFileName: string = "compose.yaml";
+    protected _unhealthy: boolean = false;
+    protected _serviceProperties: Map<string, object> = new Map<string, object>();
     protected server: DockgeServer;
 
     protected combinedTerminal? : Terminal;
@@ -37,19 +39,17 @@ export class Stack {
 
     protected static imageRepository : ImageRepository = new ImageRepository();
 
-    constructor(server : DockgeServer, name : string, composeYAML? : string, composeENV? : string, skipFSOperations = false) {
+    constructor(server : DockgeServer, name : string, composeYAML? : string, composeENV? : string) {
         this.name = name;
         this.server = server;
         this._composeYAML = composeYAML;
         this._composeENV = composeENV;
 
-        if (!skipFSOperations) {
-            // Check if compose file name is different from compose.yaml
-            for (const filename of acceptedComposeFileNames) {
-                if (fs.existsSync(path.join(this.path, filename))) {
-                    this._composeFileName = filename;
-                    break;
-                }
+        // Check if compose file name is different from compose.yaml
+        for (const filename of acceptedComposeFileNames) {
+            if (fs.existsSync(path.join(this.path, filename))) {
+                this._composeFileName = filename;
+                break;
             }
         }
     }
@@ -85,7 +85,7 @@ export class Stack {
         return {
             name: this.name,
             status: this._status,
-            started: this._status == RUNNING || this._status == RUNNING_AND_EXITED,
+            started: this.isStarted,
             imageUpdatesAvailable: Stack.imageRepository.isStackUpdateAvailable(this.name),
             tags: [],
             isManagedByDockge: this.isManagedByDockge,
@@ -94,26 +94,16 @@ export class Stack {
         };
     }
 
-    /**
-     * Get the status of the stack from `docker compose ps --format json`
-     */
-    async ps() : Promise<object> {
-        let res = await childProcessAsync.spawn("docker", [ "compose", "ps", "--format", "json" ], {
-            cwd: this.path,
-            encoding: "utf-8",
-        });
-        if (!res.stdout) {
-            return {};
-        }
-        return JSON.parse(res.stdout.toString());
-    }
-
     get isManagedByDockge() : boolean {
         return fs.existsSync(this.path) && fs.statSync(this.path).isDirectory();
     }
 
     get status() : number {
         return this._status;
+    }
+
+    get isStarted(): boolean {
+        return this._status == RUNNING || this._status == RUNNING_AND_EXITED || this._status == UNHEALTHY;
     }
 
     validate() {
@@ -174,6 +164,10 @@ export class Stack {
             fullPathDir = dir;
         }
         return fullPathDir;
+    }
+
+    get serviceProperties() {
+        return this._serviceProperties;
     }
 
     /**
@@ -240,7 +234,66 @@ export class Stack {
         return exitCode;
     }
 
-    async updateStatus() {
+    async updateProperties() {
+        const serviceProperties = new Map<string, object>();
+        this._unhealthy = false;
+
+        try {
+            const res = await childProcessAsync.spawn("docker", [ "compose", "ps", "--all", "--format", "json" ], {
+                cwd: this.path,
+                encoding: "utf-8",
+            });
+
+            if (!res.stdout) {
+                return;
+            }
+
+            const lines = res.stdout?.toString().split("\n");
+
+            let runningCount = 0;
+            let exitedCount = 0;
+
+            for (let line of lines) {
+                if (line != "") {
+                    const serviceInfo = JSON.parse(line);
+                    serviceProperties.set(serviceInfo.Service, {
+                        ...serviceInfo,
+                        ImageUpdateAvailable: Stack.imageRepository.isImageUpdateAvailable(serviceInfo.Image)
+                    });
+
+                    if (serviceInfo.State === "running") {
+                        runningCount++;
+                    } else if (serviceInfo.State == "exited") {
+                        exitedCount++;
+                    } else {
+                        log.warn("updateStackProperties", "Unexpected service state '" + serviceInfo.State + "'");
+                    }
+
+                    if (serviceInfo.Health === "unhealthy") {
+                        this._unhealthy = true;
+                    }
+                }
+            }
+
+            if (runningCount > 0 && exitedCount > 0) {
+                this._status = RUNNING_AND_EXITED;
+            } else if (runningCount > 0) {
+                this._status = RUNNING;
+            } else if (exitedCount > 0) {
+                this._status = EXITED;
+            } else {
+                this._status = UNKNOWN;
+            }
+
+            if (this._unhealthy) {
+                this._status = UNHEALTHY;
+            }
+
+            this._serviceProperties = serviceProperties;
+        } catch (e) {
+            log.error("updateStackProperties", e);
+        }
+
         let statusList = await Stack.getStatusList();
         let status = statusList.get(this.name);
 
@@ -252,7 +305,7 @@ export class Stack {
     }
 
     async updateImageInfos() {
-        const serviceInfos = await this.getServiceStatusList() as Map<string, {Image: string, Service: string}>;
+        const serviceInfos = this._serviceProperties as Map<string, {Image: string, Service: string}>;
 
         Stack.imageRepository.resetStack(this.name);
         for (const serviceInfo of serviceInfos.values()) {
@@ -308,7 +361,7 @@ export class Stack {
                     if (!await Stack.composeFileExists(stacksDir, filename)) {
                         continue;
                     }
-                    let stack = await this.getStack(server, filename);
+                    let stack = await this.getStack(server, filename, false);
                     stack._status = CREATED_FILE;
                     stackList.set(filename, stack);
                 } catch (e) {
@@ -332,6 +385,7 @@ export class Stack {
         }
 
         let composeList = JSON.parse(res.stdout.toString());
+        log.debug("getStackList", "Updating status.");
 
         for (let composeStack of composeList) {
             let stack = stackList.get(composeStack.Name);
@@ -346,8 +400,12 @@ export class Stack {
                 stackList.set(composeStack.Name, stack);
             }
 
-            stack._status = this.statusConvert(composeStack.Status);
             stack._configFilePath = composeStack.ConfigFiles;
+
+            stack._status = this.statusConvert(composeStack.Status);
+            if (stack._unhealthy) {
+                stack._status = UNHEALTHY;
+            }
         }
 
         return stackList;
@@ -396,36 +454,36 @@ export class Stack {
         }
     }
 
-    static async getStack(server: DockgeServer, stackName: string, skipFSOperations = false) : Promise<Stack> {
+    static async getStack(server: DockgeServer, stackName: string, useCache = true) : Promise<Stack> {
         let dir = path.join(server.stacksDir, stackName);
 
-        if (!skipFSOperations) {
-            if (!await fileExists(dir) || !(await fsAsync.stat(dir)).isDirectory()) {
-                // Maybe it is a stack managed by docker compose directly
-                let stackList = await this.getStackList(server, true);
-                let stack = stackList.get(stackName);
-
-                if (stack) {
-                    return stack;
-                } else {
-                    // Really not found
-                    throw new ValidationError("Stack not found");
-                }
+        if (useCache) {
+            const cachedStack = this.managedStackList.get(stackName);
+            if (cachedStack) {
+                return cachedStack;
             }
-        } else {
-            //log.debug("getStack", "Skip FS operations");
+        }
+
+        if (!await fileExists(dir) || !(await fsAsync.stat(dir)).isDirectory()) {
+            // Maybe it is a stack managed by docker compose directly
+            let stackList = await this.getStackList(server, true);
+            let stack = stackList.get(stackName);
+
+            if (stack) {
+                return stack;
+            } else {
+                // Really not found
+                throw new ValidationError("Stack not found");
+            }
         }
 
         let stack : Stack;
 
-        if (!skipFSOperations) {
-            stack = new Stack(server, stackName);
-        } else {
-            stack = new Stack(server, stackName, undefined, undefined, true);
-        }
-
-        stack._status = UNKNOWN;
+        stack = new Stack(server, stackName);
         stack._configFilePath = path.resolve(dir);
+
+        await stack.updateProperties();
+
         return stack;
     }
 
@@ -516,9 +574,9 @@ export class Stack {
         }
 
         // If the stack is not running, we don't need to restart it
-        await this.updateStatus();
+        await this.updateProperties();
         log.debug("update", "Status: " + this.status);
-        if (this.status !== RUNNING && this.status !== RUNNING_AND_EXITED) {
+        if (!this.isStarted) {
             return exitCode;
         }
 
@@ -571,38 +629,5 @@ export class Stack {
 
         terminal.join(socket);
         terminal.start();
-    }
-
-    async getServiceStatusList() {
-        let statusList = new Map<string, object>();
-
-        try {
-            const res = await childProcessAsync.spawn("docker", [ "compose", "ps", "--format", "json" ], {
-                cwd: this.path,
-                encoding: "utf-8",
-            });
-
-            if (!res.stdout) {
-                return statusList;
-            }
-
-            const lines = res.stdout?.toString().split("\n");
-
-            for (let line of lines) {
-                if (line != "") {
-                    const serviceInfo = JSON.parse(line);
-                    statusList.set(serviceInfo.Service, {
-                        ...serviceInfo,
-                        ImageUpdateAvailable: Stack.imageRepository.isImageUpdateAvailable(serviceInfo.Image)
-                    });
-                }
-            }
-
-            return statusList;
-        } catch (e) {
-            log.error("getServiceStatusList", e);
-            return statusList;
-        }
-
     }
 }

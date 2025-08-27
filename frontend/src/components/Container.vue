@@ -163,7 +163,7 @@ export default defineComponent({
             type: Boolean,
             default: false,
         },
-        statusObj: {
+        serviceProperties: {
             type: Object,
             default: undefined,
         }
@@ -178,11 +178,11 @@ export default defineComponent({
     computed: {
 
         status() {
-            if (this.statusObj) {
-                const healthStatus = this.statusObj.Health;
+            if (this.serviceProperties) {
+                const healthStatus = this.serviceProperties.Health;
 
                 if (healthStatus === "") {
-                    return this.statusObj.State;
+                    return this.serviceProperties.State;
                 } else {
                     return healthStatus;
                 }
@@ -192,8 +192,8 @@ export default defineComponent({
         },
 
         imageUpdateAvailable() {
-            if (this.statusObj) {
-                return this.statusObj.ImageUpdateAvailable;
+            if (this.serviceProperties) {
+                return this.serviceProperties.ImageUpdateAvailable;
             } else {
                 return false;
             }
@@ -248,14 +248,14 @@ export default defineComponent({
                     name: "containerInspectEndpoint",
                     params: {
                         endpoint: this.endpoint,
-                        containerName: this.statusObj.Name,
+                        containerName: this.serviceProperties.Name,
                     },
                 };
             } else {
                 return {
                     name: "containerInspect",
                     params: {
-                        containerName: this.statusObj.Name,
+                        containerName: this.serviceProperties.Name,
                     },
                 };
             }
