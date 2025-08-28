@@ -31,7 +31,10 @@
             </div>
         </div>
         <div v-if="!isEditMode && statsAvailable" class="mt-2">
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-start gap-3">
+                <span class="stats-select" @click="expandedStats = !expandedStats">
+                    <font-awesome-icon :icon="expandedStats ? 'chevron-circle-down' : 'chevron-circle-right'" />
+                </span>
                 <template v-if="!expandedStats">
                     <div class="stats">
                         {{ $t('CPU') }}: {{ serviceProperties.Stats.CPUPerc }}
@@ -40,11 +43,6 @@
                         {{ $t('memoryAbbreviated') }}: {{ serviceProperties.Stats.MemUsage }}
                     </div>
                 </template>
-                <div class="d-flex flex-grow-1 justify-content-end">
-                    <button class="btn btn-sm btn-normal" @click="expandedStats = !expandedStats">
-                        <font-awesome-icon :icon="expandedStats ? 'chevron-up' : 'chevron-down'" />
-                    </button>
-                </div>
             </div>
             <transition name="slide-fade" appear>
                 <div v-if="expandedStats" class="d-flex flex-column gap-3 mt-2">
@@ -422,6 +420,12 @@ export default defineComponent({
         width: 100%;
         align-items: center;
         justify-content: end;
+    }
+
+    .stats-select {
+        cursor: pointer;
+        font-size: 1rem;
+        color: #6c757d;
     }
 
     .stats {
