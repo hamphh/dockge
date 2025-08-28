@@ -167,6 +167,9 @@
 
                     <!-- YAML editor -->
                     <div class="shadow-box mb-3 editor-box" :class="{'edit-mode' : isEditMode}">
+                        <button v-if="isEditMode" v-b-modal.compose-editor-modal class="expand-button">
+                            <font-awesome-icon icon="expand" />
+                        </button>
                         <prism-editor
                             ref="editor"
                             v-model="stack.composeYAML"
@@ -181,6 +184,25 @@
                     <div v-if="isEditMode" class="mb-3">
                         {{ yamlError }}
                     </div>
+                    
+                    <!-- YAML modal fullscreen editor -->
+                    <BModal id="compose-editor-modal" :title="stack.composeFileName" scrollable size="fullscreen" hide-footer>
+                        <div class="shadow-box mb-3 editor-box" :class="{'edit-mode' : isEditMode}">
+                            <prism-editor
+                                ref="editor"
+                                v-model="stack.composeYAML"
+                                class="yaml-editor"
+                                :highlight="highlighterYAML"
+                                line-numbers :readonly="!isEditMode"
+                                @input="yamlCodeChange"
+                                @focus="editorFocus = true"
+                                @blur="editorFocus = false"
+                            ></prism-editor>
+                        </div>
+                        <div v-if="isEditMode" class="mb-3">
+                            {{ yamlError }}
+                        </div>
+                    </BModal>
 
                     <!-- ENV editor -->
                     <div v-if="isEditMode">
@@ -809,7 +831,25 @@ export default {
     &.edit-mode {
         background-color: #2c2f38 !important;
     }
+    position: relative;
 }
+
+.expand-button {
+    all: unset;
+    cursor: pointer;
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    z-index: 10;
+}
+
+.expand-button svg {
+    width:20px;
+    height: 20px;
+}
+
+.expand-button:hover {
+    color: white;}
 
 .agent-name {
     font-size: 13px;
