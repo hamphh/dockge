@@ -369,7 +369,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
         });
 
         // Services status
-        agentSocket.on("serviceProperties", async (stackName : unknown, callback) => {
+        agentSocket.on("updateStackData", async (stackName : unknown, callback) => {
             try {
                 checkLogin(socket);
 
@@ -378,10 +378,10 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 }
 
                 const stack = await Stack.getStack(server, stackName);
-                await stack.updateProperties(true);
+                await stack.updateData(true);
                 callbackResult({
                     ok: true,
-                    serviceProperties: Object.fromEntries(stack.serviceProperties),
+                    stack: await stack.toJSON(socket.endpoint)
                 }, callback);
             } catch (e) {
                 callbackError(e, callback);

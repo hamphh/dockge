@@ -26,12 +26,12 @@
                         <span class="d-none d-xl-inline">{{ $t("editStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode && exited" class="btn btn-primary" :disabled="processing" @click="startStack">
+                    <button v-if="!isEditMode && (hasExitedServices || !stack.started)" class="btn btn-primary" :disabled="processing" @click="startStack">
                         <font-awesome-icon icon="play" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("startStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode && active" class="btn btn-normal " :disabled="processing" @click="restartStack">
+                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal " :disabled="processing" @click="restartStack">
                         <font-awesome-icon icon="rotate" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("restartStack") }}</span>
                     </button>
@@ -41,7 +41,7 @@
                         <span class="d-none d-xl-inline">{{ $t("updateStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode && active" class="btn btn-normal" :disabled="processing" @click="stopStack">
+                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal" :disabled="processing" @click="stopStack">
                         <font-awesome-icon icon="stop" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("stopStack") }}</span>
                     </button>
@@ -251,9 +251,7 @@ import {
     copyYAMLComments, envsubstYAML,
     getCombinedTerminalName,
     getComposeTerminalName,
-    PROGRESS_TERMINAL_ROWS,
-    RUNNING, RUNNING_AND_EXITED,
-    EXITED
+    PROGRESS_TERMINAL_ROWS
 } from "../../../common/util-common";
 import { BModal } from "bootstrap-vue-next";
 import NetworkInput from "../components/NetworkInput.vue";
@@ -271,7 +269,7 @@ const envDefault = "# VARIABLE=value #comment";
 
 let yamlErrorTimeout = null;
 
-let servicePropertiesTimeout = null;
+let updateStackDataTimeout = null;
 let prismjsSymbolDefinition = {
     "symbol": {
         pattern: /(?<!\$)\$(\{[^{}]*\}|\w+)/,
@@ -303,15 +301,12 @@ export default {
             progressTerminalRows: PROGRESS_TERMINAL_ROWS,
             combinedTerminalRows: COMBINED_TERMINAL_ROWS,
             combinedTerminalCols: COMBINED_TERMINAL_COLS,
-            stack: {
-
-            },
-            serviceProperties: {},
+            stack: {},
             isEditMode: false,
             submitted: false,
             showDeleteDialog: false,
             newContainerName: "",
-            stopServicePropertiesTimeout: false,
+            stopUpdateStackDataTimeout: false,
         };
     },
     computed: {
@@ -363,14 +358,6 @@ export default {
             return this.globalStack?.status;
         },
 
-        active() {
-            return this.status === RUNNING || this.status === RUNNING_AND_EXITED;
-        },
-
-        exited() {
-            return this.status === EXITED || this.status === RUNNING_AND_EXITED;
-        },
-
         terminalName() {
             if (!this.stack.name) {
                 return "";
@@ -400,6 +387,14 @@ export default {
                 return `/compose/${this.stack.name}`;
             }
         },
+
+        hasExitedServices() {
+            return Object.values(this.stack.serviceProperties).some(service => service.State === "exited");
+        },
+
+        hasRunningServices() {
+            return Object.values(this.stack.serviceProperties).some(service => service.State === "running");
+        }
     },
     watch: {
         "stack.composeYAML": {
@@ -473,6 +468,7 @@ export default {
                 composeENV,
                 isManagedByDockge: true,
                 endpoint: "",
+                serviceProperties: {}
             };
 
             this.yamlCodeChange();
@@ -482,37 +478,37 @@ export default {
             this.loadStack();
         }
 
-        this.requestServicePoperties();
+        this.updateStackData();
     },
     unmounted() {
 
     },
     methods: {
-        startServicePropertiesTimeout() {
-            clearTimeout(servicePropertiesTimeout);
-            servicePropertiesTimeout = setTimeout(async () => {
-                this.requestServicePoperties();
+        startUpdateStackDataTimeout() {
+            clearTimeout(updateStackDataTimeout);
+            updateStackDataTimeout = setTimeout(async () => {
+                this.updateStackData();
             }, 5000);
         },
 
-        requestServicePoperties() {
+        updateStackData() {
             // Do not request if it is add mode
             if (this.isAdd) {
                 return;
             }
 
-            this.$root.emitAgent(this.endpoint, "serviceProperties", this.stack.name, (res) => {
+            this.$root.emitAgent(this.endpoint, "updateStackData", this.stack.name, (res) => {
                 if (res.ok) {
-                    this.serviceProperties = res.serviceProperties;
+                    this.stack = res.stack;
                 }
-                if (!this.stopServicePropertiesTimeout) {
-                    this.startServicePropertiesTimeout();
+                if (!this.stopUpdateStackDataTimeout) {
+                    this.startUpdateStackDataTimeout();
                 }
             });
         },
 
         getServiceProperties(serviceName) {
-            return this.serviceProperties[serviceName];
+            return this.stack.serviceProperties[serviceName];
         },
 
         exitConfirm(next) {
@@ -531,8 +527,8 @@ export default {
 
         exitAction() {
             console.log("exitAction");
-            this.stopServicePropertiesTimeout = true;
-            clearTimeout(servicePropertiesTimeout);
+            this.stopUpdateStackDataTimeout = true;
+            clearTimeout(updateStackDataTimeout);
         },
 
         bindTerminal() {

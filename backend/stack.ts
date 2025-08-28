@@ -78,6 +78,7 @@ export class Stack {
             composeYAML: this.composeYAML,
             composeENV: this.composeENV,
             primaryHostname,
+            serviceProperties: Object.fromEntries(this._serviceProperties),
         };
     }
 
@@ -166,10 +167,6 @@ export class Stack {
         return fullPathDir;
     }
 
-    get serviceProperties() {
-        return this._serviceProperties;
-    }
-
     /**
      * Save the stack to the disk
      * @param isAdd
@@ -234,7 +231,7 @@ export class Stack {
         return exitCode;
     }
 
-    async updateProperties(includeStats: boolean = false) {
+    async updateData(includeStats: boolean = false) {
         const serviceProperties = new Map<string, object>();
         this._unhealthy = false;
 
@@ -286,7 +283,7 @@ export class Stack {
                     } else if (serviceInfo.State == "exited") {
                         exitedCount++;
                     } else {
-                        log.warn("updateStackProperties", "Unexpected service state '" + serviceInfo.State + "'");
+                        log.warn("updateStackData", "Unexpected service state '" + serviceInfo.State + "'");
                     }
 
                     if (serviceInfo.Health === "unhealthy") {
@@ -311,16 +308,7 @@ export class Stack {
 
             this._serviceProperties = serviceProperties;
         } catch (e) {
-            log.error("updateStackProperties", e);
-        }
-
-        let statusList = await Stack.getStatusList();
-        let status = statusList.get(this.name);
-
-        if (status) {
-            this._status = status;
-        } else {
-            this._status = UNKNOWN;
+            log.error("updateStackData", e);
         }
     }
 
@@ -422,56 +410,24 @@ export class Stack {
 
             stack._configFilePath = composeStack.ConfigFiles;
 
-            stack._status = this.statusConvert(composeStack.Status);
+            if (composeStack.Status.startsWith("created")) {
+                stack._status = CREATED_STACK;
+            } else if (composeStack.Status.includes("exited") && composeStack.Status.includes("running")) {
+                stack._status = RUNNING_AND_EXITED;
+            } else if (composeStack.Status.includes("exited")) {
+                stack._status = EXITED;
+            } else if (composeStack.Status.startsWith("running")) {
+                stack._status = RUNNING;
+            } else {
+                stack._status = UNKNOWN;
+            }
+
             if (stack._unhealthy) {
                 stack._status = UNHEALTHY;
             }
         }
 
         return stackList;
-    }
-
-    /**
-     * Get the status list, it will be used to update the status of the stacks
-     * Not all status will be returned, only the stack that is deployed or created to `docker compose` will be returned
-     */
-    static async getStatusList() : Promise<Map<string, number>> {
-        let statusList = new Map<string, number>();
-
-        let res = await childProcessAsync.spawn("docker", [ "compose", "ls", "--all", "--format", "json" ], {
-            encoding: "utf-8",
-        });
-
-        if (!res.stdout) {
-            return statusList;
-        }
-
-        let composeList = JSON.parse(res.stdout.toString());
-
-        for (let composeStack of composeList) {
-            statusList.set(composeStack.Name, this.statusConvert(composeStack.Status));
-        }
-
-        return statusList;
-    }
-
-    /**
-     * Convert the status string from `docker compose ls` to the status number
-     * Input Example: "exited(1), running(1)"
-     * @param status
-     */
-    static statusConvert(status : string) : number {
-        if (status.startsWith("created")) {
-            return CREATED_STACK;
-        } else if (status.includes("exited") && status.includes("running")) {
-            return RUNNING_AND_EXITED;
-        } else if (status.includes("exited")) {
-            return EXITED;
-        } else if (status.startsWith("running")) {
-            return RUNNING;
-        } else {
-            return UNKNOWN;
-        }
     }
 
     static async getStack(server: DockgeServer, stackName: string, useCache = true) : Promise<Stack> {
@@ -502,7 +458,7 @@ export class Stack {
         stack = new Stack(server, stackName);
         stack._configFilePath = path.resolve(dir);
 
-        await stack.updateProperties();
+        await stack.updateData();
 
         return stack;
     }
@@ -594,7 +550,7 @@ export class Stack {
         }
 
         // If the stack is not running, we don't need to restart it
-        await this.updateProperties();
+        await this.updateData();
         log.debug("update", "Status: " + this.status);
         if (!this.isStarted) {
             return exitCode;

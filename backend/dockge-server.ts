@@ -410,7 +410,7 @@ export class DockgeServer {
             // Update stack properties every 5 Minutes
             setTimeout(
                 () => {
-                    this.updateStackProperties(5 * 60 * 1000);
+                    this.updateStackData(5 * 60 * 1000);
                 },
                 5 * 60 * 1000
             );
@@ -616,11 +616,11 @@ export class DockgeServer {
         );
     }
 
-    async updateStackProperties(updatePeriod: number) {
+    async updateStackData(updatePeriod: number) {
         const stackList = await Stack.getStackList(this, true);
         for (const stack of stackList.values()) {
             if (stack.isManagedByDockge) {
-                await stack.updateProperties();
+                await stack.updateData();
             }
         }
     }
