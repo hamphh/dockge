@@ -195,7 +195,19 @@
 
                 <!-- Image Updates-->
                 <div class="mb-4">
-                    <h5>{{ $tc("imageUpdate", 2) }}</h5>
+                    <h5>Dockge</h5>
+                    <div class="form-check form-switch ms-2 mt-3">
+                        <input
+                            id="ignoreStatus"
+                            class="form-check-input"
+                            type="checkbox"
+                            :checked="ignoreStatus"
+                            @input="updateIgnoreStatus((($event.target) as any)?.checked)"
+                        />
+                        <label class="form-check-label" for="ignoreStatus">
+                            {{ $t("ignoreStatus") }}
+                        </label>
+                    </div>
                     <div class="form-check form-switch ms-2 mt-3">
                         <input
                             id="checkImageUpdates"
@@ -227,7 +239,7 @@ import { defineComponent, PropType } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { parseDockerPort } from "../../../common/util-common";
 import { ServiceData, StatsData, StackData } from "../../../common/types";
-import { ComposeDocument, ComposeService, LABEL_IMAGEUPDATES_CHANGLOG, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../../../common/compose-document";
+import { ComposeDocument, ComposeService, LABEL_STATUS_IGNORE, LABEL_IMAGEUPDATES_CHANGLOG, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../../../common/compose-document";
 
 export default defineComponent({
     components: {
@@ -372,6 +384,10 @@ export default defineComponent({
             return "image-update-modal-" + this.name;
         },
 
+        ignoreStatus(this: { composeService: ComposeService }): boolean {
+            return this.composeService.labels.isTrue(LABEL_STATUS_IGNORE);
+        },
+
         checkImageUpdates(this: {composeService: ComposeService}): boolean {
             return !this.composeService.labels.isFalse(LABEL_IMAGEUPDATES_CHECK);
         },
@@ -444,6 +460,15 @@ export default defineComponent({
                 // Wait for the adaptation of the Yaml
                 this.$parent.$parent.saveStack();
             });
+        },
+        updateIgnoreStatus(checked: boolean) {
+            const labels = this.composeService.labels;
+            if (checked) {
+                labels.set(LABEL_STATUS_IGNORE, true);
+            } else {
+                labels.delete(LABEL_STATUS_IGNORE);
+                labels.removeIfEmpty();
+            }
         },
         updateChangelogLink(link: string) {
             const labels = this.composeService.labels;

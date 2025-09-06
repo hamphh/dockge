@@ -623,6 +623,14 @@ export class DockgeServer {
                 await stack.updateData();
             }
         }
+        log.debug("updateStackData", "Update all stacks finished.");
+
+        setTimeout(
+            () => {
+                this.updateStackData(updatePeriod);
+            },
+            updatePeriod
+        );
     }
 
     /**

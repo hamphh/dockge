@@ -21,7 +21,7 @@ import childProcessAsync from "promisify-child-process";
 import { Settings } from "./settings";
 import { ImageRepository } from "./image-repository";
 import { SimpleStackData, StackData, ServiceData, StatsData } from "../common/types";
-import { ComposeDocument, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../common/compose-document";
+import { ComposeDocument, LABEL_STATUS_IGNORE, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../common/compose-document";
 
 export class Stack {
 
@@ -293,7 +293,10 @@ export class Stack {
             const lines = res.stdout?.toString().split("\n");
 
             let runningCount = 0;
+            let ignoredRunningCount = 0;
             let exitedCount = 0;
+            let ignoredExitedCount = 0;
+            let createdCount = 0;
             this._unhealthy = false;
             this._recreateNecessary = false;
             this._imageUpdatesAvailable = false;
@@ -348,14 +351,23 @@ export class Stack {
                         }
                     );
 
+                    const ignoreState = composeServiceLabels.isTrue(LABEL_STATUS_IGNORE);
                     if (serviceInfo.State === "running") {
-                        runningCount++;
-                    } else if (serviceInfo.State == "exited") {
-                        exitedCount++;
-                    } else {
-                        if (serviceInfo.State !== "created") {
-                            log.warn("updateStackData", "Unexpected service state '" + serviceInfo.State + "'");
+                        if (!ignoreState) {
+                            runningCount++;
+                        } else {
+                            ignoredRunningCount++;
                         }
+                    } else if (serviceInfo.State == "exited") {
+                        if (!ignoreState) {
+                            exitedCount++;
+                        } else {
+                            ignoredExitedCount++;
+                        }
+                    } else if (serviceInfo.State !== "created") {
+                        createdCount++;
+                    } else {
+                        log.warn("updateStackData", "Unexpected service state '" + serviceInfo.State + "'");
                     }
 
                     if (serviceInfo.Health === "unhealthy") {
@@ -370,6 +382,12 @@ export class Stack {
                 this._status = RUNNING;
             } else if (exitedCount > 0) {
                 this._status = EXITED;
+            } else if (ignoredRunningCount > 0) {
+                this._status = RUNNING;
+            } else if (ignoredExitedCount > 0) {
+                this._status = EXITED;
+            } else if (createdCount > 0) {
+                this._status = CREATED_STACK;
             } else {
                 this._status = UNKNOWN;
             }
@@ -479,20 +497,12 @@ export class Stack {
 
             stack._configFilePath = composeStack.ConfigFiles;
 
-            if (composeStack.Status.startsWith("created")) {
-                stack._status = CREATED_STACK;
-            } else if (composeStack.Status.includes("exited") && composeStack.Status.includes("running")) {
-                stack._status = RUNNING_AND_EXITED;
-            } else if (composeStack.Status.includes("exited")) {
-                stack._status = EXITED;
-            } else if (composeStack.Status.startsWith("running")) {
-                stack._status = RUNNING;
+            if (composeStack.Status.startsWith("running")) {
+                // Only running containers, nothing more to check
+                stack._status = stack._unhealthy ? UNHEALTHY : RUNNING;
             } else {
-                stack._status = UNKNOWN;
-            }
-
-            if (stack._unhealthy) {
-                stack._status = UNHEALTHY;
+                // We have to check the stack data, to get the correct status
+                await stack.updateData();
             }
         }
 
