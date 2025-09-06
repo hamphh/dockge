@@ -20,6 +20,8 @@ import { InteractiveTerminal, Terminal } from "./terminal";
 import childProcessAsync from "promisify-child-process";
 import { Settings } from "./settings";
 import { ImageRepository } from "./image-repository";
+import { SimpleStackData, StackData, ServiceData, StatsData } from "../common/types";
+import { ComposeDocument, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../common/compose-document";
 
 export class Stack {
 
@@ -29,8 +31,11 @@ export class Stack {
     protected _composeENV?: string;
     protected _configFilePath?: string;
     protected _composeFileName: string = "compose.yaml";
+    protected _composeDocument: ComposeDocument | undefined = undefined;
     protected _unhealthy: boolean = false;
-    protected _serviceProperties: Map<string, object> = new Map<string, object>();
+    protected _imageUpdatesAvailable: boolean = false;
+    protected _recreateNecessary: boolean = false;
+    protected _services: Map<string, ServiceData> = new Map();
     protected server: DockgeServer;
 
     protected combinedTerminal? : Terminal;
@@ -39,7 +44,7 @@ export class Stack {
 
     protected static imageRepository : ImageRepository = new ImageRepository();
 
-    constructor(server : DockgeServer, name : string, composeYAML? : string, composeENV? : string) {
+    constructor(server: DockgeServer, name: string, composeYAML?: string, composeENV?: string) {
         this.name = name;
         this.server = server;
         this._composeYAML = composeYAML;
@@ -54,7 +59,7 @@ export class Stack {
         }
     }
 
-    async toJSON(endpoint : string) : Promise<object> {
+    async getData(endpoint : string) : Promise<StackData> {
 
         // Since we have multiple agents now, embed primary hostname in the stack object too.
         let primaryHostname = await Settings.get("primaryHostname");
@@ -72,26 +77,27 @@ export class Stack {
             }
         }
 
-        let obj = this.toSimpleJSON(endpoint);
+        const simpleData = this.getSimpleData(endpoint);
         return {
-            ...obj,
+            ...simpleData,
             composeYAML: this.composeYAML,
             composeENV: this.composeENV,
             primaryHostname,
-            serviceProperties: Object.fromEntries(this._serviceProperties),
+            services: Object.fromEntries(this._services),
         };
     }
 
-    toSimpleJSON(endpoint : string) : object {
+    getSimpleData(endpoint : string) : SimpleStackData {
         return {
             name: this.name,
             status: this._status,
             started: this.isStarted,
-            imageUpdatesAvailable: Stack.imageRepository.isStackUpdateAvailable(this.name),
+            recreateNecessary: this._recreateNecessary,
+            imageUpdatesAvailable: this._imageUpdatesAvailable,
             tags: [],
             isManagedByDockge: this.isManagedByDockge,
             composeFileName: this._composeFileName,
-            endpoint,
+            endpoint
         };
     }
 
@@ -146,6 +152,14 @@ export class Stack {
             }
         }
         return this._composeENV;
+    }
+
+    get composeDocument(): ComposeDocument {
+        if (!this._composeDocument) {
+            this._composeDocument = new ComposeDocument(this.composeYAML, this.composeENV);
+        }
+
+        return this._composeDocument!;
     }
 
     get path() : string {
@@ -209,9 +223,6 @@ export class Stack {
             throw new Error("Failed to deploy, please check the terminal output for more information.");
         }
 
-        // Update image infos
-        this.updateImageInfos();
-
         return exitCode;
     }
 
@@ -231,30 +242,47 @@ export class Stack {
         return exitCode;
     }
 
-    async updateData(includeStats: boolean = false) {
-        const serviceProperties = new Map<string, object>();
-        this._unhealthy = false;
-
+    async getServiceStats(): Promise<Map<string, StatsData>> {
+        const serviceStats = new Map<string, StatsData>();
         try {
-            const serviceStats = new Map<string, object>();
-            if (includeStats) {
-                const statsRes = await childProcessAsync.spawn("docker", [ "compose", "stats", "--no-stream", "--format", "json" ], {
-                    cwd: this.path,
-                    encoding: "utf-8",
-                });
+            const statsRes = await childProcessAsync.spawn("docker", [ "compose", "stats", "--no-stream", "--format", "json" ], {
+                cwd: this.path,
+                encoding: "utf-8",
+            });
 
-                if (statsRes.stdout) {
-                    const statsLines = statsRes.stdout?.toString().split("\n");
+            if (statsRes.stdout) {
+                const statsLines = statsRes.stdout?.toString().split("\n");
 
-                    for (let statsLine of statsLines) {
-                        if (statsLine != "") {
-                            const stats = JSON.parse(statsLine);
-                            serviceStats.set(stats.Name, stats);
-                        }
+                for (let statsLine of statsLines) {
+                    if (statsLine != "") {
+                        const stats = JSON.parse(statsLine);
+                        serviceStats.set(
+                            stats.Name,
+                            {
+                                cpuPerc: stats.CPUPerc,
+                                memUsage: stats.MemUsage,
+                                memPerc: stats.MemPerc,
+                                netIO: stats.NetIO,
+                                blockIO: stats.BlockIO
+                            }
+                        );
                     }
                 }
             }
+        } catch (e) {
+            log.error("getServiceStats", e);
+        }
 
+        return serviceStats;
+    }
+
+    async updateData(includeStats: boolean = false) {
+        const services = new Map<string, ServiceData>();
+        const composeDocument = this.composeDocument;
+
+        const serviceStats = includeStats ? await this.getServiceStats() : new Map<string, StatsData>();
+
+        try {
             const res = await childProcessAsync.spawn("docker", [ "compose", "ps", "--all", "--format", "json" ], {
                 cwd: this.path,
                 encoding: "utf-8",
@@ -268,22 +296,69 @@ export class Stack {
 
             let runningCount = 0;
             let exitedCount = 0;
+            this._unhealthy = false;
+            this._recreateNecessary = false;
+            this._imageUpdatesAvailable = false;
 
             for (let line of lines) {
                 if (line != "") {
                     const serviceInfo = JSON.parse(line);
-                    serviceProperties.set(serviceInfo.Service, {
-                        ...serviceInfo,
-                        ImageUpdateAvailable: Stack.imageRepository.isImageUpdateAvailable(serviceInfo.Image),
-                        Stats: serviceStats.get(serviceInfo.Name)
-                    });
+
+                    const composeService = composeDocument.services.getService(serviceInfo.Service);
+                    const composeServiceLabels = composeService.labels;
+
+                    const recreateNecessary = serviceInfo.Image !== composeService.image;
+                    if (recreateNecessary) {
+                        this._recreateNecessary = true;
+                    }
+
+                    let imageInfo = Stack.imageRepository.getImageInfo(this.name, serviceInfo.Service, serviceInfo.Image);
+
+                    let serviceImageUpdateAvailable = false;
+                    if (!recreateNecessary && !composeServiceLabels.isFalse(LABEL_IMAGEUPDATES_CHECK)) {
+                        const localImageId = serviceInfo.Labels?.match(/com\.docker\.compose\.image=([^,]+)/)?.[1] ?? "";
+
+                        if (localImageId !== imageInfo.localId) {
+                            try {
+                                imageInfo = await Stack.imageRepository.updateLocal(this.name, serviceInfo.Service, serviceInfo.Image);
+                            } catch (e) {
+                                log.error("updateStackData", "Stack: '" + this.name + "' service: '" + serviceInfo.Service + "': " + e);
+                            }
+                        }
+
+                        if (
+                            imageInfo.isImageUpdateAvailable()
+                            && imageInfo.remoteDigest !== composeServiceLabels.get(LABEL_IMAGEUPDATES_IGNORE)
+                        ) {
+                            serviceImageUpdateAvailable = true;
+                            this._imageUpdatesAvailable = true;
+                        }
+                    }
+
+                    services.set(
+                        serviceInfo.Service,
+                        {
+                            name: serviceInfo.Service,
+                            containerName: serviceInfo.Name,
+                            image: serviceInfo.Image,
+                            state: serviceInfo.State,
+                            status: serviceInfo.Status,
+                            health: serviceInfo.Health,
+                            recreateNecessary: recreateNecessary,
+                            imageUpdateAvailable: serviceImageUpdateAvailable,
+                            remoteImageDigest: imageInfo.remoteDigest,
+                            stats: serviceStats.get(serviceInfo.Name)
+                        }
+                    );
 
                     if (serviceInfo.State === "running") {
                         runningCount++;
                     } else if (serviceInfo.State == "exited") {
                         exitedCount++;
                     } else {
-                        log.warn("updateStackData", "Unexpected service state '" + serviceInfo.State + "'");
+                        if (serviceInfo.State !== "created") {
+                            log.warn("updateStackData", "Unexpected service state '" + serviceInfo.State + "'");
+                        }
                     }
 
                     if (serviceInfo.Health === "unhealthy") {
@@ -306,21 +381,19 @@ export class Stack {
                 this._status = UNHEALTHY;
             }
 
-            this._serviceProperties = serviceProperties;
+            this._services = services;
         } catch (e) {
             log.error("updateStackData", e);
         }
     }
 
     async updateImageInfos() {
-        const serviceInfos = this._serviceProperties as Map<string, {Image: string, Service: string}>;
-
         Stack.imageRepository.resetStack(this.name);
-        for (const serviceInfo of serviceInfos.values()) {
+        for (const serviceData of this._services.values()) {
             try {
-                await Stack.imageRepository.update(this.name, serviceInfo.Image);
+                await Stack.imageRepository.update(this.name, serviceData.name, serviceData.image);
             } catch (e) {
-                log.error("updateImageInfos", "Image '" + serviceInfo.Image + "': " + e);
+                log.error("updateImageInfos", "Stack '" + this.name + "' - Image '" + serviceData.image + "': " + e);
             }
         }
     }
@@ -393,7 +466,6 @@ export class Stack {
         }
 
         let composeList = JSON.parse(res.stdout.toString());
-        log.debug("getStackList", "Updating status.");
 
         for (let composeStack of composeList) {
             let stack = stackList.get(composeStack.Name);
@@ -470,9 +542,6 @@ export class Stack {
             throw new Error("Failed to start, please check the terminal output for more information.");
         }
 
-        // Update image infos
-        this.updateImageInfos();
-
         return exitCode;
     }
 
@@ -491,9 +560,6 @@ export class Stack {
         if (exitCode !== 0) {
             throw new Error("Failed to restart, please check the terminal output for more information.");
         }
-
-        // Update image infos
-        this.updateImageInfos();
 
         return exitCode;
     }
@@ -527,8 +593,15 @@ export class Stack {
             throw new Error("Failed to restart service, please check the terminal output for more information.");
         }
 
-        // Update image infos
-        this.updateImageInfos();
+        return exitCode;
+    }
+
+    async recreateService(socket: DockgeSocket, service: string): Promise<number> {
+        const terminalName = getComposeTerminalName(socket.endpoint, this.name);
+        let exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "up", "-d", "--force-recreate", service ], this.path);
+        if (exitCode !== 0) {
+            throw new Error("Failed to recreate service, please check the terminal output for more information.");
+        }
 
         return exitCode;
     }
@@ -561,8 +634,20 @@ export class Stack {
             throw new Error("Failed to restart, please check the terminal output for more information.");
         }
 
-        // Update image infos
-        this.updateImageInfos();
+        return exitCode;
+    }
+
+    async updateService(socket: DockgeSocket, service: string) {
+        const terminalName = getComposeTerminalName(socket.endpoint, this.name);
+        let exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "pull", service ], this.path);
+        if (exitCode !== 0) {
+            throw new Error("Failed to pull, please check the terminal output for more information.");
+        }
+
+        exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", [ "compose", "up", "-d", "--remove-orphans", service ], this.path);
+        if (exitCode !== 0) {
+            throw new Error("Failed to restart, please check the terminal output for more information.");
+        }
 
         return exitCode;
     }
@@ -605,5 +690,9 @@ export class Stack {
 
         terminal.join(socket);
         terminal.start();
+    }
+
+    async validateComposeYAML(socket: DockgeSocket, composeYAML: string) {
+        // TODO: docker compose -f compose.temp config --dry-run
     }
 }

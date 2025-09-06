@@ -6,7 +6,7 @@
                     {{ $t('cpu') }}
                 </div>
                 <div>
-                    {{ stats.CPUPerc }}
+                    {{ stats.cpuPerc }}
                 </div>
             </div>
             <div class="stat">
@@ -14,7 +14,7 @@
                     {{ $t('memory') }}
                 </div>
                 <div>
-                    {{ stats.MemUsage }} ({{ stats.MemPerc }})
+                    {{ stats.memUsage }} ({{ stats.memPerc }})
                 </div>
             </div>
             <div class="stat">
@@ -22,7 +22,7 @@
                     {{ $t('networkIO') }}
                 </div>
                 <div>
-                    {{ stats.NetIO }}
+                    {{ stats.netIO }}
                 </div>
             </div>
             <div class="stat">
@@ -30,22 +30,25 @@
                     {{ $t('blockIO') }}
                 </div>
                 <div>
-                    {{ stats.BlockIO }}
+                    {{ stats.blockIO }}
                 </div>
             </div>
         </div>
     </div>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent, PropType } from "vue";
+import { StatsData } from "../../../common/types";
+
+export default defineComponent({
     props: {
         stats: {
-            type: Object,
+            type: Object as PropType<StatsData>,
             required: true
         }
     },
-};
+});
 </script>
 
 <style lang="scss" scoped>

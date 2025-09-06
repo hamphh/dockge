@@ -354,8 +354,28 @@ optgroup {
         }
     }
 
+    .btn-info {
+        color: $dark-font-color2;
+
+        &:hover {
+            $hover-color: darken($info, 8%);
+            background-color: $hover-color;
+            border-color: $hover-color;
+        }
+        
+        &:hover, &:active, &:focus, &.active {
+            color: $dark-font-color2;
+        }
+    }
+
     .btn-warning {
         color: $dark-font-color2;
+
+        &:hover {
+            $hover-color: darken($warning, 8%);
+            background-color: $hover-color;
+            border-color: $hover-color;
+        }
 
         &:hover, &:active, &:focus, &.active {
             color: $dark-font-color2;

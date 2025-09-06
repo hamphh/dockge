@@ -2,51 +2,102 @@
     <div class="shadow-box big-padding mb-3 container">
         <div class="row">
             <div class="col-12 col-xxl-7">
-                <h4>{{ name }} <Update :update-available="started && imageUpdateAvailable" /></h4>
-                <div class="image mb-2">
-                    <span class="me-1">{{ imageName }}:</span><span class="tag">{{ imageTag }}</span>
-                </div>
+                <h4>{{ name }}</h4>
             </div>
             <div class="col-12 col-xxl-5 mb-2 d-flex justify-content-xxl-end align-items-start">
+                <button
+                    v-if="!isEditMode && service.recreateNecessary"
+                    class="btn btn-sm btn-info me-2"
+                    :disabled="isProcessing"
+                    @click="recreateService"
+                >
+                    <font-awesome-icon icon="rocket" />
+                </button>
+
+                <button
+                    v-if="!isEditMode && service.imageUpdateAvailable"
+                    v-b-modal="updateModalId"
+                    class="btn btn-sm btn-info me-2"
+                    :disabled="isProcessing"
+                >
+                    <font-awesome-icon icon="arrow-up" />
+                </button>
+
+                <!-- Image update modal -->
+                <BModal :id="updateModalId" :ref="updateModalId" :title="$tc('imageUpdate', 1)" hide-footer>
+                    <div class="shadow-box mb-3">
+                        <div>
+                            <h5>{{ $t("image") }}</h5>
+                            <span>{{ composeService.image }}</span>
+                        </div>
+                        <div v-if="changelogLink" class="mt-3">
+                            <h5>{{ $t("changelog") }}</h5>
+                            <a :href="changelogLink" target="_blank">{{ changelogLink }}</a>
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <button class="btn btn-normal me-4" @click="skipCurrentUpdate">
+                                <font-awesome-icon icon="ban" class="me-1" />
+                                <span class="d-none d-xl-inline">{{ $t("ignoreUpdate") }}</span>
+                            </button>
+                            <button class="btn btn-primary" @click="updateService">
+                                <font-awesome-icon icon="cloud-arrow-down" class="me-1" />
+                                <span class="d-none d-xl-inline">{{ $t("updateStack") }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </BModal>
+
                 <div v-if="!isEditMode" class="btn-group me-2" role="group">
-                    <router-link v-if="started" class="btn btn-normal me-1" :to="logRouteLink"><font-awesome-icon icon="file-text" /></router-link>
-                    <router-link v-if="started" class="btn btn-normal me-1" :to="inspectRouteLink"><font-awesome-icon icon="info-circle" /></router-link>
-                    <router-link v-if="started" class="btn btn-normal me-1" :to="terminalRouteLink"><font-awesome-icon icon="terminal" /></router-link>
+                    <router-link v-if="started" class="btn btn-sm btn-normal me-1" :to="logRouteLink" :disabled="isProcessing"><font-awesome-icon icon="file-text" /></router-link>
+                    <router-link v-if="started" class="btn btn-sm btn-normal me-1" :to="inspectRouteLink" :disabled="isProcessing"><font-awesome-icon icon="info-circle" /></router-link>
+                    <router-link v-if="started" class="btn btn-sm btn-normal me-1" :to="terminalRouteLink" :disabled="isProcessing"><font-awesome-icon icon="terminal" /></router-link>
                 </div>
 
                 <div v-if="!isEditMode" class="btn-group" role="group">
-                    <button v-if="!started" type="button" class="btn btn-success me-1" @click="startService"><font-awesome-icon icon="play" /></button>
-                    <button v-if="started" type="button" class="btn btn-danger me-1" @click="stopService"><font-awesome-icon icon="stop" /></button>
-                    <button v-if="started" type="button" class="btn btn-warning me-1" @click="restartService"><font-awesome-icon icon="rotate" /></button>
+                    <button v-if="!started" type="button" class="btn btn-sm btn-success" :disabled="isProcessing" @click="startService"><font-awesome-icon icon="play" /></button>
+                    <button v-if="started" type="button" class="btn btn-sm btn-danger me-1" :disabled="isProcessing" @click="stopService"><font-awesome-icon icon="stop" /></button>
+                    <button v-if="started" type="button" class="btn btn-sm btn-warning" :disabled="isProcessing" @click="restartService"><font-awesome-icon icon="rotate" /></button>
                 </div>
             </div>
         </div>
         <div v-if="!isEditMode" class="row">
+            <div v-if="service.recreateNecessary" class="notification mb-2">{{ $t("recreateNecessary") }}</div>
+            <div class="d-flex flex-wrap justify-content-between gap-3 mb-2">
+                <div class="image">
+                    <span class="me-1">{{ composeService.imageName }}:</span><span class="tag">{{ composeService.imageTag }}</span>
+                </div>
+                <div v-if="started" class="status">
+                    {{ service.status }}
+                </div>
+            </div>
+        </div>
+
+        <div v-if="!isEditMode" class="row">
             <div class="col">
                 <span class="badge me-1" :class="bgStyle">{{ status }}</span>
 
-                <a v-for="port in envsubstService.ports" :key="port" :href="parsePort(port).url" target="_blank">
-                    <span class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
+                <a v-for="port in composeService.get('ports', [], true)" :key="port" :href="parsePort(port).url" target="_blank">
+                    <span v-if="started" class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
                 </a>
             </div>
         </div>
-        <div v-if="!isEditMode && statsAvailable" class="mt-2">
+        <div v-if="!isEditMode && service.stats" class="mt-2">
             <div class="d-flex align-items-start gap-3">
                 <span class="stats-select" @click="expandedStats = !expandedStats">
                     <font-awesome-icon :icon="expandedStats ? 'chevron-circle-down' : 'chevron-circle-right'" />
                 </span>
                 <template v-if="!expandedStats">
                     <div class="stats">
-                        {{ $t('CPU') }}: {{ serviceProperties.Stats.CPUPerc }}
+                        {{ $t('CPU') }}: {{ service.stats.cpuPerc }}
                     </div>
                     <div class="stats">
-                        {{ $t('memoryAbbreviated') }}: {{ serviceProperties.Stats.MemUsage }}
+                        {{ $t('memoryAbbreviated') }}: {{ service.stats.memUsage }}
                     </div>
                 </template>
             </div>
             <transition name="slide-fade" appear>
                 <div v-if="expandedStats" class="d-flex flex-column gap-3 mt-2">
-                    <DockerStats :stats="serviceProperties.Stats" />
+                    <DockerStats :stats="service.stats" />
                 </div>
             </transition>
         </div>
@@ -67,12 +118,10 @@
             <div v-if="isEditMode && showConfig" class="config mt-3">
                 <!-- Image -->
                 <div class="mb-4">
-                    <label class="form-label">
-                        {{ $t("dockerImage") }}
-                    </label>
-                    <div class="input-group mb-3">
+                    <h5>{{ $t("dockerImage") }}</h5>
+                    <div class="input-group mt-3 mb-3">
                         <input
-                            v-model="service.image"
+                            v-model="composeService.image"
                             class="form-control"
                             list="image-datalist"
                         />
@@ -87,26 +136,20 @@
 
                 <!-- Ports -->
                 <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("port", 2) }}
-                    </label>
-                    <ArrayInput name="ports" :display-name="$t('port')" placeholder="HOST:CONTAINER" />
+                    <h5>{{ $tc("port", 2) }}</h5>
+                    <ArrayInput :composeArray="composeService.ports" :display-name="$t('port')" placeholder="HOST:CONTAINER" />
                 </div>
 
                 <!-- Volumes -->
                 <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("volume", 2) }}
-                    </label>
-                    <ArrayInput name="volumes" :display-name="$t('volume')" placeholder="HOST:CONTAINER" />
+                    <h5>{{ $tc("volume", 2) }}</h5>
+                    <ArrayInput :composeArray="composeService.volumes" :display-name="$t('volume')" placeholder="HOST:CONTAINER" />
                 </div>
 
                 <!-- Restart Policy -->
                 <div class="mb-4">
-                    <label class="form-label">
-                        {{ $t("restartPolicy") }}
-                    </label>
-                    <select v-model="service.restart" class="form-select">
+                    <h5>{{ $t("restartPolicy") }}</h5>
+                    <select v-model="composeService.restart" class="form-select mt-3">
                         <option value="always">{{ $t("restartPolicyAlways") }}</option>
                         <option value="unless-stopped">{{ $t("restartPolicyUnlessStopped") }}</option>
                         <option value="on-failure">{{ $t("restartPolicyOnFailure") }}</option>
@@ -116,20 +159,17 @@
 
                 <!-- Environment Variables -->
                 <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("environmentVariable", 2) }}
-                    </label>
-                    <ArrayInput name="environment" :display-name="$t('environmentVariable')" placeholder="KEY=VALUE" />
+                    <h5>{{ $tc("environmentVariable", 2) }}</h5>
+                    <!-- TODO environmap kann auch Map sein -->
+                    <ArrayInput :composeArray="composeService.environment" :display-name="$t('environmentVariable')" placeholder="KEY=VALUE" />
                 </div>
 
                 <!-- Container Name -->
                 <div v-if="false" class="mb-4">
-                    <label class="form-label">
-                        {{ $t("containerName") }}
-                    </label>
+                    <h5>{{ $t("containerName") }}</h5>
                     <div class="input-group mb-3">
                         <input
-                            v-model="service.container_name"
+                            v-model="composeService.containerName"
                             class="form-control"
                         />
                     </div>
@@ -138,33 +178,56 @@
 
                 <!-- Network -->
                 <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("network", 2) }}
-                    </label>
+                    <h5>{{ $tc("network", 2) }}</h5>
 
-                    <div v-if="networkList.length === 0 && service.networks && service.networks.length > 0" class="text-warning mb-3">
+                    <div v-if="composeDocument.networks.isEmpty() && !composeService.networks.isEmpty()" class="text-warning mb-3">
                         {{ $t("NoNetworksAvailable") }}
                     </div>
 
-                    <ArraySelect name="networks" :display-name="$t('network')" placeholder="Network Name" :options="networkList" />
+                    <ArraySelect :composeArray="composeService.networks" :display-name="$t('network')" placeholder="Network Name" :options="composeDocument.networks.names" />
                 </div>
 
                 <!-- Depends on -->
                 <div class="mb-4">
-                    <label class="form-label">
-                        {{ $t("dependsOn") }}
-                    </label>
-                    <ArrayInput name="depends_on" :display-name="$t('dependsOn')" :placeholder="$t(`containerName`)" />
+                    <h5>{{ $t("dependsOn") }}</h5>
+                    <ArrayInput :composeArray="composeService.dependsOn" :display-name="$t('dependsOn')" :placeholder="$t(`containerName`)" />
+                </div>
+
+                <!-- Image Updates-->
+                <div class="mb-4">
+                    <h5>{{ $tc("imageUpdate", 2) }}</h5>
+                    <div class="form-check form-switch ms-2 mt-3">
+                        <input
+                            id="checkImageUpdates"
+                            class="form-check-input"
+                            type="checkbox"
+                            :checked="checkImageUpdates"
+                            @input="updateCheckImageUpdates((($event.target) as any)?.checked)"
+                        />
+                        <label class="form-check-label" for="checkImageUpdates">
+                            {{ $t("checkImageUpdates") }}
+                        </label>
+                    </div>
+                    <div class="input-group mt-3">
+                        <input
+                            :value="changelogLink"
+                            class="form-control"
+                            @input="updateChangelogLink(($event.target as any)?.value)"
+                        />
+                    </div>
+                    <div class="form-text ms-3">{{ $t("changelogLink") }}</div>
                 </div>
             </div>
         </transition>
     </div>
 </template>
 
-<script>
-import { defineComponent } from "vue";
+<script lang="ts">
+import { defineComponent, PropType } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { parseDockerPort } from "../../../common/util-common";
+import { ServiceData, StackData } from "../../../common/types";
+import { ComposeDocument, ComposeService, LABEL_IMAGEUPDATES_CHANGLOG, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../../../common/compose-document";
 
 export default defineComponent({
     components: {
@@ -179,13 +242,9 @@ export default defineComponent({
             type: Boolean,
             default: false,
         },
-        first: {
-            type: Boolean,
-            default: false,
-        },
-        serviceProperties: {
-            type: Object,
-            default: undefined,
+        service: {
+            type: Object as PropType<ServiceData>,
+            default: {} as ServiceData,
         }
     },
     emits: [
@@ -198,37 +257,17 @@ export default defineComponent({
     },
     computed: {
 
-        status() {
-            if (this.serviceProperties) {
-                const healthStatus = this.serviceProperties.Health;
+        status(): string {
+            const healthStatus = this.service.health;
 
-                if (healthStatus === "") {
-                    return this.serviceProperties.State;
-                } else {
-                    return healthStatus;
-                }
+            if (healthStatus === "") {
+                return this.service.state;
             } else {
-                return "N/A";
+                return healthStatus;
             }
         },
 
-        imageUpdateAvailable() {
-            if (this.serviceProperties) {
-                return this.serviceProperties.ImageUpdateAvailable;
-            } else {
-                return false;
-            }
-        },
-
-        networkList() {
-            let list = [];
-            for (const networkName in this.jsonObject.networks) {
-                list.push(networkName);
-            }
-            return list;
-        },
-
-        bgStyle() {
+        bgStyle(): string {
             if (this.status === "running" || this.status === "healthy") {
                 return "bg-primary";
             } else if (this.status === "unhealthy") {
@@ -238,7 +277,7 @@ export default defineComponent({
             }
         },
 
-        started() {
+        started(): boolean {
             return this.status === "starting" || this.status === "running" || this.status === "healthy" || this.status === "unhealthy" || this.status === "stopping";
         },
 
@@ -269,14 +308,14 @@ export default defineComponent({
                     name: "containerInspectEndpoint",
                     params: {
                         endpoint: this.endpoint,
-                        containerName: this.serviceProperties.Name,
+                        containerName: this.service.containerName,
                     },
                 };
             } else {
                 return {
                     name: "containerInspect",
                     params: {
-                        containerName: this.serviceProperties.Name,
+                        containerName: this.service.containerName,
                     },
                 };
             }
@@ -305,73 +344,46 @@ export default defineComponent({
             }
         },
 
-        endpoint() {
+        endpoint(): string {
             return this.$parent.$parent.endpoint;
         },
 
-        stack() {
+        stack(): StackData {
             return this.$parent.$parent.stack;
         },
 
-        stackName() {
-            return this.$parent.$parent.stack.name;
+        stackName(): string {
+            return this.stack.name;
         },
 
-        service() {
-            if (!this.jsonObject.services[this.name]) {
-                return {};
-            }
-            return this.jsonObject.services[this.name];
+        composeDocument(): ComposeDocument {
+            return this.$parent.$parent.composeDocument;
         },
 
-        jsonObject() {
-            return this.$parent.$parent.jsonConfig;
+        composeService(this: {composeDocument: ComposeDocument, name: string}): ComposeService {
+            return this.composeDocument.services.getService(this.name);
         },
 
-        envsubstJSONConfig() {
-            return this.$parent.$parent.envsubstJSONConfig;
+        updateModalId(): string {
+            return "image-update-modal-" + this.name;
         },
 
-        envsubstService() {
-            if (!this.envsubstJSONConfig.services[this.name]) {
-                return {};
-            }
-            return this.envsubstJSONConfig.services[this.name];
+        checkImageUpdates(this: {composeService: ComposeService}): boolean {
+            return !this.composeService.labels.isFalse(LABEL_IMAGEUPDATES_CHECK);
         },
 
-        imageName() {
-            if (this.envsubstService.image) {
-                return this.envsubstService.image.split(":")[0];
-            } else {
-                return "";
-            }
+        changelogLink(this: {composeService: ComposeService}): string {
+            return this.composeService.labels.get(LABEL_IMAGEUPDATES_CHANGLOG, "");
         },
 
-        imageTag() {
-            if (this.envsubstService.image) {
-                let tag = this.envsubstService.image.split(":")[1];
-
-                if (tag) {
-                    return tag;
-                } else {
-                    return "latest";
-                }
-            } else {
-                return "";
-            }
-        },
-
-        statsAvailable() {
-            return this.serviceProperties && this.serviceProperties.Stats;
+        isProcessing(): boolean {
+            return this.$parent.$parent.processing;
         }
     },
     mounted() {
-        if (this.first) {
-            //this.showConfig = true;
-        }
     },
     methods: {
-        parsePort(port) {
+        parsePort(port: string) {
             if (this.stack.endpoint) {
                 return parseDockerPort(port, this.stack.primaryHostname);
             } else {
@@ -380,23 +392,73 @@ export default defineComponent({
             }
         },
         remove() {
-            delete this.jsonObject.services[this.name];
+            this.composeDocument.services.delete(this.name);
         },
         stopService() {
+            this.$parent.$parent.processing = true;
             this.$root.emitAgent(this.endpoint, "stopService", this.stack.name, this.name, (res) => {
+                this.$parent.$parent.processing = false;
                 this.$root.toastRes(res);
             });
         },
         startService() {
+            this.$parent.$parent.processing = true;
             this.$root.emitAgent(this.endpoint, "startService", this.stack.name, this.name, (res) => {
+                this.$parent.$parent.processing = false;
                 this.$root.toastRes(res);
             });
         },
         restartService() {
+            this.$parent.$parent.processing = true;
             this.$root.emitAgent(this.endpoint, "restartService", this.stack.name, this.name, (res) => {
+                this.$parent.$parent.processing = false;
                 this.$root.toastRes(res);
             });
         },
+        recreateService() {
+            this.$parent.$parent.processing = true;
+            this.$root.emitAgent(this.endpoint, "recreateService", this.stack.name, this.name, (res) => {
+                this.$parent.$parent.processing = false;
+                this.$root.toastRes(res);
+            });
+        },
+        updateService() {
+            this.$refs[this.updateModalId].hide();
+
+            this.$parent.$parent.processing = true;
+            this.$root.emitAgent(this.endpoint, "updateService", this.stack.name, this.name, (res) => {
+                this.$parent.$parent.processing = false;
+                this.$root.toastRes(res);
+            });
+        },
+        skipCurrentUpdate() {
+            this.$refs[this.updateModalId].hide();
+
+            this.composeService.labels.set(LABEL_IMAGEUPDATES_IGNORE, this.service.remoteImageDigest);
+
+            this.$nextTick(() => {
+                // Wait for the adaptation of the Yaml
+                this.$parent.$parent.saveStack();
+            });
+        },
+        updateChangelogLink(link: string) {
+            const labels = this.composeService.labels;
+            if (link) {
+                labels.set(LABEL_IMAGEUPDATES_CHANGLOG, link);
+            } else {
+                labels.delete(LABEL_IMAGEUPDATES_CHANGLOG);
+                labels.removeIfEmpty();
+            }
+        },
+        updateCheckImageUpdates(checked: boolean) {
+            const labels = this.composeService.labels;
+            if (checked) {
+                labels.delete(LABEL_IMAGEUPDATES_CHECK);
+                labels.removeIfEmpty();
+            } else {
+                labels.set(LABEL_IMAGEUPDATES_CHECK, false);
+            }
+        }
     }
 });
 </script>
@@ -411,6 +473,16 @@ export default defineComponent({
         .tag {
             color: #33383b;
         }
+    }
+
+    .status {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    .notification {
+        font-size: 1rem;
+        color: $danger;
     }
 
     .function {

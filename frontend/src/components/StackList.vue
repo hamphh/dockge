@@ -3,8 +3,10 @@
         <div class="list-header">
             <div class="header-top">
                 <!-- TODO -->
-                <button v-if="false" class="btn btn-outline-normal ms-2" :class="{ 'active': selectMode }" type="button"
-                    @click="selectMode = !selectMode">
+                <button
+                    v-if="false" class="btn btn-outline-normal ms-2" :class="{ 'active': selectMode }" type="button"
+                    @click="selectMode = !selectMode"
+                >
                     {{ $t("Select") }}
                 </button>
 
@@ -46,8 +48,10 @@
                 <router-link to="/compose">{{ $t("addFirstStackMsg") }}</router-link>
             </div>
             <div class="stack-list-inner" v-for="(agent, index) in agentStackList" :key="index">
-                <div v-if="$root.agentCount > 1" class="p-2 agent-select"
-                    @click="closedAgents.set(agent.endpoint, !closedAgents.get(agent.endpoint))">
+                <div
+                    v-if="agentCount > 1" class="p-2 agent-select"
+                    @click="closedAgents.set(agent.endpoint, !closedAgents.get(agent.endpoint))"
+                >
                     <span class="me-1">
                         <font-awesome-icon v-show="closedAgents.get(agent.endpoint)" icon="chevron-circle-right" />
                         <font-awesome-icon v-show="!closedAgents.get(agent.endpoint)" icon="chevron-circle-down" />
@@ -55,9 +59,12 @@
                     <span v-if="agent.endpoint === 'current'">{{ $t("currentEndpoint") }}</span>
                     <span v-else>{{ endpointDisplay(agent.endpoint) }}</span>
                 </div>
-                <StackListItem v-show="$root.agentCount === 1 || !closedAgents.get(agent.endpoint)"
-                    v-for="(item, index) in agent.stacks" :key="index" :stack="item" :isSelectMode="selectMode"
-                    :isSelected="isSelected" :select="select" :deselect="deselect" />
+                <StackListItem
+                    v-for="(item, index) in agent.stacks"
+                    v-show="agentCount === 1 || !closedAgents.get(agent.endpoint)"
+                    :key="index" :stack="item" :isSelectMode="selectMode"
+                    :isSelected="isSelected" :select="select" :deselect="deselect"
+                />
             </div>
         </div>
     </div>
@@ -67,12 +74,14 @@
     </Confirm>
 </template>
 
-<script>
-import Confirm from "../components/Confirm.vue";
-import StackListItem from "../components/StackListItem.vue";
-import { CREATED_FILE, CREATED_STACK, EXITED, RUNNING, RUNNING_AND_EXITED, UNKNOWN } from "../../../common/util-common";
+<script lang="ts">
+import { defineComponent } from "vue";
+import Confirm from "./Confirm.vue";
+import StackListItem from "./StackListItem.vue";
+import { CREATED_FILE, CREATED_STACK, EXITED, RUNNING, RUNNING_AND_EXITED, UNHEALTHY, UNKNOWN } from "../../../common/util-common";
+import { SimpleStackData } from "../../../common/types";
 
-export default {
+export default defineComponent({
     components: {
         Confirm,
         StackListItem,
@@ -119,12 +128,16 @@ export default {
 
         },
 
+        agentCount() {
+            return this.$root.agentCount;
+        },
+
         /**
          * Returns a sorted list of stacks based on the applied filters and search text.
          * @returns {Array} The sorted list of stacks.
          */
-        agentStackList() {
-            let result = Object.values(this.$root.completeStackList);
+        agentStackList(): {endpoint: string, stacks: SimpleStackData[]}[] {
+            let result: SimpleStackData[] = Object.values(this.$root.completeStackList);
 
             result = result.filter(stack => {
                 // filter by search text
@@ -133,24 +146,28 @@ export default {
                 if (this.searchText !== "") {
                     const loweredSearchText = this.searchText.toLowerCase();
                     searchTextMatch =
-                        stack.name.toLowerCase().includes(loweredSearchText)
+                        stack.name.toLowerCase().includes(loweredSearchText);
+                    /* TODO
                         || stack.tags.find(tag => tag.name.toLowerCase().includes(loweredSearchText)
                             || tag.value?.toLowerCase().includes(loweredSearchText));
+                    */
                 }
 
-                // filter by active
+                // filter by active TODO
                 let activeMatch = true;
+                /**
                 if (this.filterState.active != null && this.filterState.active.length > 0) {
                     activeMatch = this.filterState.active.includes(stack.active);
-                }
+                }*/
 
-                // filter by tags
+                // filter by tags TODO
                 let tagsMatch = true;
+                /**
                 if (this.filterState.tags != null && this.filterState.tags.length > 0) {
                     tagsMatch = stack.tags.map(tag => tag.tag_id) // convert to array of tag IDs
                         .filter(stackTagId => this.filterState.tags.includes(stackTagId)) // perform Array Intersaction between filter and stack's tags
                         .length > 0;
-                }
+                }*/
 
                 return searchTextMatch && activeMatch && tagsMatch;
             });
@@ -170,7 +187,11 @@ export default {
 
                 // sort by status
                 if (status1 !== status2) {
-                    if (status2 === RUNNING) {
+                    if (status2 === UNHEALTHY) {
+                        return 1;
+                    } else if (status1 === UNHEALTHY) {
+                        return -1;
+                    } else if (status2 === RUNNING) {
                         return 1;
                     } else if (status1 === RUNNING) {
                         return -1;
@@ -197,28 +218,30 @@ export default {
 
             // Group stacks by endpoint, sorting them so the local endpoint is first
             // and the rest are sorted alphabetically
-            result = [
+            const resultByEndpoint: {endpoint: string, stacks: SimpleStackData[]}[] = [
                 ...result.reduce((acc, stack) => {
-                    const endpoint = stack.endpoint || 'current';
-                    if (!acc.has(endpoint)) {
-                        acc.set(endpoint, []);
+                    const endpoint = stack.endpoint || "current";
+                    let stacks = acc.get(endpoint);
+                    if (!stacks) {
+                        stacks = [];
+                        acc.set(endpoint, stacks);
                     }
-                    acc.get(endpoint).push(stack);
+                    stacks.push(stack);
                     return acc;
-                }, new Map()).entries()
-            ].map(([endpoint, stacks]) => ({
+                }, new Map<string, SimpleStackData[]>()).entries()
+            ].map(([ endpoint, stacks ]) => ({
                 endpoint,
                 stacks
             })).sort((a, b) => {
-                if (a.endpoint === 'current' && b.endpoint !== 'current') {
+                if (a.endpoint === "current" && b.endpoint !== "current") {
                     return -1;
-                } else if (a.endpoint !== 'current' && b.endpoint === 'current') {
+                } else if (a.endpoint !== "current" && b.endpoint === "current") {
                     return 1;
                 }
                 return a.endpoint.localeCompare(b.endpoint);
             });
 
-            return result;
+            return resultByEndpoint;
         },
 
         isDarkTheme() {
@@ -294,8 +317,8 @@ export default {
          * @returns {void}
          */
         onScroll() {
-            if (window.top.scrollY <= 133) {
-                this.windowTop = window.top.scrollY;
+            if (window.top!.scrollY <= 133) {
+                this.windowTop = window.top!.scrollY;
             } else {
                 this.windowTop = 133;
             }
@@ -382,7 +405,7 @@ export default {
             return this.$root.endpointDisplayFunction(endpoint);
         }
     },
-};
+});
 </script>
 
 <style lang="scss" scoped>

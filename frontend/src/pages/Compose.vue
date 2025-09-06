@@ -3,50 +3,50 @@
         <div>
             <h1 v-if="isAdd" class="mb-3">{{ $t("compose") }}</h1>
             <h1 v-else class="mb-3">
-                <Uptime :stack="globalStack" :pill="true" /> {{ stack.name }}
-                <span v-if="$root.agentCount > 1 && endpoint !== ''" class="agent-name">
+                <Uptime :stack="stack" :pill="true" /> {{ stack.name }}
+                <span v-if="agentCount > 1 && endpoint !== ''" class="agent-name">
                     ({{ endpointDisplay }})
                 </span>
             </h1>
 
             <div v-if="stack.isManagedByDockge" class="mb-3">
                 <div class="btn-group me-2" role="group">
-                    <button v-if="isEditMode" class="btn btn-primary" :disabled="processing" @click="deployStack">
+                    <button v-if="isEditMode" class="btn btn-primary me-1" :disabled="processing" @click="deployStack">
                         <font-awesome-icon icon="rocket" class="me-1" />
                         {{ $t("deployStack") }}
                     </button>
 
-                    <button v-if="isEditMode" class="btn btn-normal" :disabled="processing" @click="saveStack">
+                    <button v-if="isEditMode" class="btn btn-normal me-1" :disabled="processing" @click="saveStack">
                         <font-awesome-icon icon="save" class="me-1" />
                         {{ $t("saveStackDraft") }}
                     </button>
 
-                    <button v-if="!isEditMode" class="btn btn-secondary" :disabled="processing" @click="enableEditMode">
+                    <button v-if="!isEditMode" class="btn btn-secondary me-1" :disabled="processing" @click="enableEditMode">
                         <font-awesome-icon icon="pen" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("editStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode && (hasExitedServices || !stack.started)" class="btn btn-primary" :disabled="processing" @click="startStack">
+                    <button v-if="!isEditMode && (hasExitedServices || !stack.started)" class="btn btn-primary me-1" :disabled="processing" @click="startStack">
                         <font-awesome-icon icon="play" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("startStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal " :disabled="processing" @click="restartStack">
+                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal me-1" :disabled="processing" @click="restartStack">
                         <font-awesome-icon icon="rotate" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("restartStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode" class="btn btn-normal" :disabled="processing" @click="updateStack">
+                    <button v-if="!isEditMode" class="btn me-1" :class="stack.imageUpdatesAvailable ? 'btn-info' : 'btn-normal'" :disabled="processing" @click="updateStack">
                         <font-awesome-icon icon="cloud-arrow-down" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("updateStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal" :disabled="processing" @click="stopStack">
+                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal me-1" :disabled="processing" @click="stopStack">
                         <font-awesome-icon icon="stop" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("stopStack") }}</span>
                     </button>
 
-                    <BDropdown right text="" variant="normal">
+                    <BDropdown right text="" variant="dark">
                         <BDropdownItem @click="downStack">
                             <font-awesome-icon icon="stop" class="me-1" />
                             <span class="d-none d-xl-inline">{{ $t("downStack") }}</span>
@@ -98,8 +98,8 @@
                             <div class="mt-3">
                                 <label for="name" class="form-label">{{ $t("dockgeAgent") }}</label>
                                 <select v-model="stack.endpoint" class="form-select">
-                                    <option v-for="(agent, endpoint) in $root.agentList" :key="endpoint" :value="endpoint" :disabled="$root.agentStatusList[endpoint] != 'online'">
-                                        ({{ $root.agentStatusList[endpoint] }}) {{ (agent.name !== '') ? agent.name : agent.url || $t("Controller") }}
+                                    <option v-for="(agent, endpoint) in agentList" :key="endpoint" :value="endpoint" :disabled="agentStatusList[endpoint] != 'online'">
+                                        ({{ agentStatusList[endpoint] }}) {{ (agent.name !== '') ? agent.name : agent.url || $t("Controller") }}
                                     </option>
                                 </select>
                             </div>
@@ -123,16 +123,13 @@
 
                     <div ref="containerList">
                         <Container
-                            v-for="(service, name) in jsonConfig.services"
+                            v-for="(service, name) in composeDocument.services.getServices()"
                             :key="name"
                             :name="name"
                             :is-edit-mode="isEditMode"
-                            :first="name === Object.keys(jsonConfig.services)[0]"
-                            :serviceProperties="getServiceProperties(name)"
+                            :service="getServiceData(name)"
                         />
                     </div>
-
-                    <button v-if="false && isEditMode && jsonConfig.services && Object.keys(jsonConfig.services).length > 0" class="btn btn-normal mb-3" @click="addContainer">{{ $t("addContainer") }}</button>
 
                     <!-- General -->
                     <div v-if="isEditMode">
@@ -143,7 +140,7 @@
                                 <label class="form-label">
                                     {{ $tc("url", 2) }}
                                 </label>
-                                <ArrayInput name="urls" :display-name="$t('url')" placeholder="https://" object-type="x-dockge" />
+                                <ArrayInput :composeArray="composeDocument.xDockge.urls" :display-name="$t('url')" placeholder="https://" />
                             </div>
                         </div>
                     </div>
@@ -184,9 +181,9 @@
                     <div v-if="isEditMode" class="mb-3">
                         {{ yamlError }}
                     </div>
-                    
+
                     <!-- YAML modal fullscreen editor -->
-                    <BModal id="compose-editor-modal" :title="stack.composeFileName" scrollable size="fullscreen" hide-footer>
+                    <BModal id="compose-editor-modal" :title="stack.composeFileName" scrollable size="lg" hide-footer>
                         <div class="shadow-box mb-3 editor-box" :class="{'edit-mode' : isEditMode}">
                             <prism-editor
                                 ref="editor"
@@ -258,11 +255,11 @@
     </transition>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from "vue";
 import { highlight, languages } from "prismjs/components/prism-core";
 import { PrismEditor } from "vue-prism-editor";
 import "prismjs/components/prism-yaml";
-import { parseDocument, Document } from "yaml";
 
 import "prismjs/themes/prism-tomorrow.css";
 import "vue-prism-editor/dist/prismeditor.min.css";
@@ -270,14 +267,19 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import {
     COMBINED_TERMINAL_COLS,
     COMBINED_TERMINAL_ROWS,
-    copyYAMLComments, envsubstYAML,
     getCombinedTerminalName,
     getComposeTerminalName,
-    PROGRESS_TERMINAL_ROWS
+    PROGRESS_TERMINAL_ROWS,
+    UNKNOWN
 } from "../../../common/util-common";
+import {
+    StackData
+} from "../../../common/types";
+import {
+    ComposeDocument, ComposeService
+} from "../../../common/compose-document";
 import { BModal } from "bootstrap-vue-next";
 import NetworkInput from "../components/NetworkInput.vue";
-import dotenv from "dotenv";
 
 const template = `
 services:
@@ -287,18 +289,19 @@ services:
     ports:
       - "8080:80"
 `;
+
 const envDefault = "# VARIABLE=value #comment";
 
-let yamlErrorTimeout = null;
+let yamlErrorTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+let updateStackDataTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 
-let updateStackDataTimeout = null;
 let prismjsSymbolDefinition = {
     "symbol": {
         pattern: /(?<!\$)\$(\{[^{}]*\}|\w+)/,
     }
 };
 
-export default {
+export default defineComponent({
     components: {
         NetworkInput,
         FontAwesomeIcon,
@@ -311,12 +314,10 @@ export default {
     beforeRouteLeave(to, from, next) {
         this.exitConfirm(next);
     },
-    yamlDoc: null,  // For keeping the yaml comments
-    data() {
+    data(this: {composeDocument: ComposeDocument, stack: StackData}) {
         return {
             editorFocus: false,
-            jsonConfig: {},
-            envsubstJSONConfig: {},
+            composeDocument: new ComposeDocument(),
             yamlError: "",
             processing: true,
             showProgressTerminal: false,
@@ -333,17 +334,25 @@ export default {
     },
     computed: {
 
-        endpointDisplay() {
+        endpointDisplay(): string {
             return this.$root.endpointDisplayFunction(this.endpoint);
         },
 
-        urls() {
-            if (!this.envsubstJSONConfig["x-dockge"] || !this.envsubstJSONConfig["x-dockge"].urls || !Array.isArray(this.envsubstJSONConfig["x-dockge"].urls)) {
-                return [];
-            }
+        agentCount(): number {
+            return this.$root.agentCount;
+        },
 
-            let urls = [];
-            for (const url of this.envsubstJSONConfig["x-dockge"].urls) {
+        agentList() {
+            return this.$root.agentList;
+        },
+
+        agentStatusList() {
+            return this.$root.agentStatusList;
+        },
+
+        urls(this: {composeDocument: ComposeDocument}): {display: string, url: string}[] {
+            let urls: {display: string, url: string}[] = [];
+            for (const url of this.composeDocument.xDockge.urls.values) {
                 let display;
                 try {
                     let obj = new URL(url);
@@ -364,45 +373,29 @@ export default {
             return urls;
         },
 
-        isAdd() {
+        isAdd(): boolean {
             return this.$route.path === "/compose" && !this.submitted;
         },
 
-        /**
-         * Get the stack from the global stack list, because it may contain more real-time data like status
-         * @return {*}
-         */
-        globalStack() {
-            return this.$root.completeStackList[this.stack.name + "_" + this.endpoint];
-        },
-
-        status() {
-            return this.globalStack?.status;
-        },
-
-        terminalName() {
+        terminalName(): string {
             if (!this.stack.name) {
                 return "";
             }
             return getComposeTerminalName(this.endpoint, this.stack.name);
         },
 
-        combinedTerminalName() {
+        combinedTerminalName(): string {
             if (!this.stack.name) {
                 return "";
             }
             return getCombinedTerminalName(this.endpoint, this.stack.name);
         },
 
-        networks() {
-            return this.jsonConfig.networks;
-        },
-
-        endpoint() {
+        endpoint(): string {
             return this.stack.endpoint || this.$route.params.endpoint || "";
         },
 
-        url() {
+        url(): string {
             if (this.stack.endpoint) {
                 return `/compose/${this.stack.name}/${this.stack.endpoint}`;
             } else {
@@ -410,12 +403,12 @@ export default {
             }
         },
 
-        hasExitedServices() {
-            return Object.values(this.stack.serviceProperties).some(service => service.State === "exited");
+        hasExitedServices(this: {stack: StackData}): boolean {
+            return Object.values(this.stack.services).some(service => service.state === "exited");
         },
 
-        hasRunningServices() {
-            return Object.values(this.stack.serviceProperties).some(service => service.State === "running");
+        hasRunningServices(this: {stack: StackData}): boolean {
+            return Object.values(this.stack.services).some(service => service.state === "running");
         }
     },
     watch: {
@@ -439,20 +432,11 @@ export default {
             deep: true,
         },
 
-        jsonConfig: {
+        composeDocument: {
             handler() {
                 if (!this.editorFocus) {
-                    console.debug("jsonConfig changed");
-
-                    let doc = new Document(this.jsonConfig);
-
-                    // Stick back the yaml comments
-                    if (this.yamlDoc) {
-                        copyYAMLComments(doc, this.yamlDoc);
-                    }
-
-                    this.stack.composeYAML = doc.toString();
-                    this.yamlDoc = doc;
+                    console.debug("composeDocument changed");
+                    this.stack.composeYAML = this.composeDocument.toYAML();
                 }
             },
             deep: true,
@@ -467,8 +451,8 @@ export default {
             this.processing = false;
             this.isEditMode = true;
 
-            let composeYAML;
-            let composeENV;
+            let composeYAML: string;
+            let composeENV: string;
 
             if (this.$root.composeTemplate) {
                 composeYAML = this.$root.composeTemplate;
@@ -483,18 +467,21 @@ export default {
                 composeENV = envDefault;
             }
 
-            // Default Values
             this.stack = {
                 name: "",
-                composeYAML,
-                composeENV,
+                status: UNKNOWN,
+                started: false,
+                imageUpdatesAvailable: false,
+                tags: [],
+                composeYAML: composeYAML,
+                composeENV: composeENV,
                 isManagedByDockge: true,
+                composeFileName: "",
                 endpoint: "",
-                serviceProperties: {}
+                primaryHostname: "",
+                services: {}
             };
-
             this.yamlCodeChange();
-
         } else {
             this.stack.name = this.$route.params.stackName;
             this.loadStack();
@@ -514,23 +501,21 @@ export default {
         },
 
         updateStackData() {
-            // Do not request if it is add mode
-            if (this.isAdd) {
-                return;
+            if (!this.isAdd && !this.isEditMode) {
+                this.$root.emitAgent(this.endpoint, "updateStackData", this.stack.name, (res) => {
+                    if (res.ok) {
+                        this.stack = res.stack;
+                    }
+                });
             }
 
-            this.$root.emitAgent(this.endpoint, "updateStackData", this.stack.name, (res) => {
-                if (res.ok) {
-                    this.stack = res.stack;
-                }
-                if (!this.stopUpdateStackDataTimeout) {
-                    this.startUpdateStackDataTimeout();
-                }
-            });
+            if (!this.stopUpdateStackDataTimeout) {
+                this.startUpdateStackDataTimeout();
+            }
         },
 
-        getServiceProperties(serviceName) {
-            return this.stack.serviceProperties[serviceName];
+        getServiceData(serviceName) {
+            return this.stack.services[serviceName];
         },
 
         exitConfirm(next) {
@@ -574,31 +559,20 @@ export default {
         deployStack() {
             this.processing = true;
 
-            if (!this.jsonConfig.services) {
+            if (this.composeDocument.services.isEmpty()) {
                 this.$root.toastError("No services found in compose.yaml");
                 this.processing = false;
                 return;
             }
 
-            // Check if services is object
-            if (typeof this.jsonConfig.services !== "object") {
-                this.$root.toastError("Services must be an object");
-                this.processing = false;
-                return;
-            }
-
-            let serviceNameList = Object.keys(this.jsonConfig.services);
+            let serviceNames = this.composeDocument.services.names;
 
             // Set the stack name if empty, use the first container name
-            if (!this.stack.name && serviceNameList.length > 0) {
-                let serviceName = serviceNameList[0];
-                let service = this.jsonConfig.services[serviceName];
+            if (!this.stack.name && serviceNames.length > 0) {
+                const serviceName = serviceNames[0];
+                const service = this.composeDocument.services.getService(serviceName);
 
-                if (service && service.container_name) {
-                    this.stack.name = service.container_name;
-                } else {
-                    this.stack.name = serviceName;
-                }
+                this.stack.name = service.get("container_name", serviceName);
             }
 
             this.bindTerminal();
@@ -727,44 +701,15 @@ export default {
             return highlight(code, languages.docker_env);
         },
 
-        yamlToJSON(yaml) {
-            let doc = parseDocument(yaml);
-            if (doc.errors.length > 0) {
-                throw doc.errors[0];
-            }
-
-            const config = doc.toJS() ?? {};
-
-            // Check data types
-            // "services" must be an object
-            if (!config.services) {
-                config.services = {};
-            }
-
-            if (Array.isArray(config.services) || typeof config.services !== "object") {
-                throw new Error("Services must be an object");
-            }
-
-            return {
-                config,
-                doc,
-            };
-        },
-
         yamlCodeChange() {
             try {
-                let { config, doc } = this.yamlToJSON(this.stack.composeYAML);
-
-                this.yamlDoc = doc;
-                this.jsonConfig = config;
-
-                let env = dotenv.parse(this.stack.composeENV);
-                let envYAML = envsubstYAML(this.stack.composeYAML, env);
-                this.envsubstJSONConfig = this.yamlToJSON(envYAML).config;
+                this.composeDocument = new ComposeDocument(this.stack.composeYAML, this.stack.composeENV);
 
                 clearTimeout(yamlErrorTimeout);
                 this.yamlError = "";
             } catch (e) {
+                console.log("ymlError", e);
+
                 clearTimeout(yamlErrorTimeout);
 
                 if (this.yamlError) {
@@ -789,7 +734,7 @@ export default {
         addContainer() {
             this.checkYAML();
 
-            if (this.jsonConfig.services[this.newContainerName]) {
+            if (this.composeDocument.services.has(this.newContainerName)) {
                 this.$root.toastError("Container name already exists");
                 return;
             }
@@ -799,9 +744,11 @@ export default {
                 return;
             }
 
-            this.jsonConfig.services[this.newContainerName] = {
-                restart: "unless-stopped",
-            };
+            this.composeDocument.services.set(
+                this.newContainerName,
+                { restart: "unless-stopped" }
+            );
+
             this.newContainerName = "";
             let element = this.$refs.containerList.lastElementChild;
             element.scrollIntoView({
@@ -815,7 +762,7 @@ export default {
         },
 
     }
-};
+});
 </script>
 
 <style scoped lang="scss">

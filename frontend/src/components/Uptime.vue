@@ -2,13 +2,15 @@
     <span :class="className">{{ statusName }}</span>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent, PropType } from "vue";
 import { statusColor, statusNameShort } from "../../../common/util-common";
+import { SimpleStackData } from "../../../common/types";
 
-export default {
+export default defineComponent({
     props: {
         stack: {
-            type: Object,
+            type: Object as PropType<SimpleStackData>,
             default: null,
         },
         fixedWidth: {
@@ -39,7 +41,7 @@ export default {
             return className;
         },
     },
-};
+});
 </script>
 
 <style scoped>

@@ -4,6 +4,7 @@ import { defineComponent } from "vue";
 import jwtDecode from "jwt-decode";
 import { Terminal } from "@xterm/xterm";
 import { AgentSocket } from "../../../common/agent-socket";
+import { SimpleStackData } from "../../../common/types";
 
 let socket : Socket;
 
@@ -53,8 +54,8 @@ export default defineComponent({
             return Object.keys(this.agentList).length;
         },
 
-        completeStackList() {
-            let list : Record<string, object> = {};
+        completeStackList(): Record<string, SimpleStackData> {
+            let list : Record<string, SimpleStackData> = {};
 
             for (let stackName in this.stackList) {
                 list[stackName + "_"] = this.stackList[stackName];
@@ -264,7 +265,7 @@ export default defineComponent({
                 }
             });
 
-            socket.on("stackStatusList", (res) => {
+            /*socket.on("stackStatusList", (res) => {
                 if (res.ok) {
                     for (let stackName in res.stackStatusList) {
                         const stackObj = this.stackList[stackName];
@@ -273,7 +274,7 @@ export default defineComponent({
                         }
                     }
                 }
-            });
+            });*/
 
             socket.on("agentStatus", (res) => {
                 this.agentStatusList[res.endpoint] = res.status;

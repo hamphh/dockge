@@ -147,5 +147,12 @@
     "memory": "Memory",
     "memoryAbbreviated": "Mem",
     "networkIO": "Network I/O",
-    "blockIO": "Block I/O"
+    "blockIO": "Block I/O",
+    "image": "Image",
+    "imageUpdate": "Image Update | Image Updates",
+    "checkImageUpdates": "Check for image updates",
+    "changelogLink": "Link to changelog",
+    "changelog": "Changelog",
+    "ignoreUpdate": "Skip",
+    "recreateNecessary": "The container image is not up to date. Please redeploy the service."
 }

@@ -83,7 +83,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
 
                 callbackResult({
                     ok: true,
-                    stack: await stack.toJSON(socket.endpoint),
+                    stack: await stack.getData(socket.endpoint),
                 }, callback);
             } catch (e) {
                 callbackError(e, callback);
@@ -296,6 +296,58 @@ export class DockerSocketHandler extends AgentSocketHandler {
             }
         });
 
+        // recreate service
+        agentSocket.on("recreateService", async (stackName : unknown, serviceName: unknown, callback) => {
+            try {
+                checkLogin(socket);
+
+                if (typeof(stackName) !== "string") {
+                    throw new ValidationError("Stack name must be a string");
+                }
+
+                if (typeof(serviceName) !== "string") {
+                    throw new ValidationError("Service name must be a string");
+                }
+
+                const stack = await Stack.getStack(server, stackName);
+                await stack.recreateService(socket, serviceName);
+                callbackResult({
+                    ok: true,
+                    msg: "Recreated",
+                    msgi18n: true,
+                }, callback);
+                server.sendStackList();
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
+
+        // restart service
+        agentSocket.on("updateService", async (stackName : unknown, serviceName: unknown, callback) => {
+            try {
+                checkLogin(socket);
+
+                if (typeof(stackName) !== "string") {
+                    throw new ValidationError("Stack name must be a string");
+                }
+
+                if (typeof(serviceName) !== "string") {
+                    throw new ValidationError("Service name must be a string");
+                }
+
+                const stack = await Stack.getStack(server, stackName);
+                await stack.updateService(socket, serviceName);
+                callbackResult({
+                    ok: true,
+                    msg: "Restarted",
+                    msgi18n: true,
+                }, callback);
+                server.sendStackList();
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
+
         // Interactive Terminal for containers
         agentSocket.on("joinContainerTerminal", async (stackName : unknown, serviceName : unknown, shell : unknown, callback) => {
             try {
@@ -381,7 +433,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 await stack.updateData(true);
                 callbackResult({
                     ok: true,
-                    stack: await stack.toJSON(socket.endpoint)
+                    stack: await stack.getData(socket.endpoint)
                 }, callback);
             } catch (e) {
                 callbackError(e, callback);

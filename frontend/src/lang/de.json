@@ -134,5 +134,10 @@
     "inspect": "Eigenschaften",
     "CurrentHostname": "(nicht gesetzt: verwende aktuellen Hostname)",
     "Downed": "Heruntergefahren",
-    "NoNetworksAvailable": "Keine Netzwerke verfügbar. Du musst zunächst interne Netzwerke hinzufügen oder externe Netzwerke auf der rechten Seite aktivieren."
+    "NoNetworksAvailable": "Keine Netzwerke verfügbar. Du musst zunächst interne Netzwerke hinzufügen oder externe Netzwerke auf der rechten Seite aktivieren.",
+    "imageUpdates": "Image Aktualisierungen",
+    "checkImageUpdates": "Überprüfe auf Image Aktualisierungen",
+    "changelogLink": "Link zum Changelog",
+    "ignoreUpdate": "Ignorieren",
+    "recreateNecessary": "Das Container Image ist nicht aktuell. Bitte den Service redeployen."
 }

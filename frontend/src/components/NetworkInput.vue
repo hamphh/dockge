@@ -2,8 +2,8 @@
     <div>
         <h5>{{ $t("Internal Networks") }}</h5>
         <ul class="list-group">
-            <li v-for="(networkRow, index) in networkList" :key="index" class="list-group-item">
-                <input v-model="networkRow.key" type="text" class="no-bg domain-input" :placeholder="$t(`Network name...`)" />
+            <li v-for="(networkRow, index) in networkList as {name: string, data: any}[]" :key="index" class="list-group-item">
+                <input v-model="networkRow.name" type="text" class="no-bg domain-input" :placeholder="$t(`Network name...`)" />
                 <font-awesome-icon icon="times" class="action remove ms-2 me-3 text-danger" @click="remove(index)" />
             </li>
         </ul>
@@ -26,7 +26,7 @@
             <span v-if="false" class="text-danger ms-2 delete">Delete</span>
         </div>
 
-        <div v-if="false" class="input-group mb-3">
+        <!--div v-if="false" class="input-group mb-3">
             <input
                 placeholder="New external network name..."
                 class="form-control"
@@ -38,13 +38,18 @@
         </div>
 
         <div v-if="false">
-            <button class="btn btn-primary btn-sm mt-3 me-2" @click="applyToYAML">{{ $t("applyToYAML") }}</button>
-        </div>
+            <button class="btn btn-primary btn-sm mt-3 me-2" @click="applyToComposeDocument">{{ $t("applyToYAML") }}</button>
+        </div-->
     </div>
 </template>
 
-<script>
-export default {
+<script lang="ts">
+import { defineComponent } from "vue";
+import { ComposeDocument, ComposeNetwork, ComposeNetworks } from "../../../common/compose-document";
+import { StackData } from "../../../common/types";
+
+export default defineComponent({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data() {
         return {
             networkList: [],
@@ -54,11 +59,11 @@ export default {
         };
     },
     computed: {
-        jsonConfig() {
-            return this.$parent.$parent.jsonConfig;
+        composeDocument(): ComposeDocument {
+            return this.$parent.$parent.composeDocument;
         },
 
-        stack() {
+        stack(): StackData {
             return this.$parent.$parent.stack;
         },
 
@@ -71,7 +76,7 @@ export default {
         },
     },
     watch: {
-        "jsonConfig.networks": {
+        "composeDocument.networks.composeData.data": {
             handler() {
                 if (this.editorFocus) {
                     console.debug("jsonConfig.networks changed");
@@ -81,7 +86,7 @@ export default {
             deep: true,
         },
 
-        "selectedExternalList": {
+        selectedExternalList: {
             handler() {
                 for (const networkName in this.selectedExternalList) {
                     const enable = this.selectedExternalList[networkName];
@@ -95,14 +100,14 @@ export default {
                         delete this.externalList[networkName];
                     }
                 }
-                this.applyToYAML();
+                this.applyToComposeDocument();
             },
             deep: true,
         },
 
-        "networkList": {
+        networkList: {
             handler() {
-                this.applyToYAML();
+                this.applyToComposeDocument();
             },
             deep: true,
         }
@@ -117,16 +122,16 @@ export default {
             this.networkList = [];
             this.externalList = {};
 
-            for (const key in this.jsonConfig.networks) {
-                let obj = {
-                    key: key,
-                    value: this.jsonConfig.networks[key],
+            for (const [ name, network ] of Object.entries(this.composeDocument.networks.getNetworks()) as [string, ComposeNetwork][]) {
+                const networkObj = {
+                    name: name,
+                    data: network.composeData.data,
                 };
 
-                if (obj.value && obj.value.external) {
-                    this.externalList[key] = Object.assign({}, obj.value);
+                if (network.external) {
+                    this.externalList[name] = Object.assign({}, networkObj.data);
                 } else {
-                    this.networkList.push(obj);
+                    this.networkList.push(networkObj);
                 }
             }
 
@@ -160,38 +165,40 @@ export default {
 
         addField() {
             this.networkList.push({
-                key: "",
-                value: {},
+                name: "",
+                data: {},
             });
         },
 
-        remove(index) {
+        remove(index: number) {
             this.networkList.splice(index, 1);
-            this.applyToYAML();
+            this.applyToComposeDocument();
         },
 
-        applyToYAML() {
+        applyToComposeDocument() {
             if (this.editorFocus) {
                 return;
             }
 
-            this.jsonConfig.networks = {};
+            const networks = {};
 
             // Internal networks
             for (const networkRow of this.networkList) {
-                this.jsonConfig.networks[networkRow.key] = networkRow.value;
+                networks[networkRow.name] = networkRow.data;
             }
 
             // External networks
             for (const networkName in this.externalList) {
-                this.jsonConfig.networks[networkName] = this.externalList[networkName];
+                networks[networkName] = this.externalList[networkName];
             }
 
-            console.debug("applyToYAML", this.jsonConfig.networks);
+            this.composeDocument.networks.replace(networks);
+
+            console.debug("applyToComposeDocument", networks);
         }
 
     },
-};
+});
 </script>
 
 <style lang="scss" scoped>

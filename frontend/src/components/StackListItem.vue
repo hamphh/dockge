@@ -2,24 +2,27 @@
     <router-link :to="url" :class="{ 'dim' : !stack.isManagedByDockge }" class="item">
         <Uptime :stack="stack" :fixed-width="true" class="me-2" />
         <div class="title">
-            <span class="me-2">{{ stackName }}</span>
-            <Update :update-available="stack.started && stack.imageUpdatesAvailable" />
-            <div v-if="$root.agentCount > 1" class="endpoint">{{ endpointDisplay }}</div>
+            <span class="me-2">{{ stack.name }}</span>
+            <font-awesome-icon v-if="stack.started && stack.recreateNecessary" icon="rocket" class="notification-icon me-2" />
+            <font-awesome-icon v-if="stack.started && stack.imageUpdatesAvailable" icon="arrow-up" class="notification-icon me-2" />
+            <div v-if="agentCount > 1" class="endpoint">{{ endpointDisplay }}</div>
         </div>
     </router-link>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent, PropType } from "vue";
 import Uptime from "./Uptime.vue";
+import { SimpleStackData } from "../../../common/types";
 
-export default {
+export default defineComponent({
     components: {
         Uptime
     },
     props: {
         /** Stack this represents */
         stack: {
-            type: Object,
+            type: Object as PropType<SimpleStackData>,
             default: null,
         },
         /** If the user is in select mode */
@@ -57,6 +60,9 @@ export default {
         endpointDisplay() {
             return this.$root.endpointDisplayFunction(this.stack.endpoint);
         },
+        agentCount() {
+            return this.$root.agentCount;
+        },
         url() {
             if (this.stack.endpoint) {
                 return `/compose/${this.stack.name}/${this.stack.endpoint}`;
@@ -68,9 +74,6 @@ export default {
             return {
                 marginLeft: `${31 * this.depth}px`,
             };
-        },
-        stackName() {
-            return this.stack.name;
         },
     },
     watch: {
@@ -105,16 +108,15 @@ export default {
         /**
          * Toggle selection of stack
          * @returns {void}
-         */
         toggleSelection() {
             if (this.isSelected(this.stack.id)) {
                 this.deselect(this.stack.id);
             } else {
                 this.select(this.stack.id);
             }
-        },
+        },*/
     },
-};
+});
 </script>
 
 <style lang="scss" scoped>
@@ -177,6 +179,11 @@ export default {
 
 .dim {
     opacity: 0.5;
+}
+
+.notification-icon {
+    color: $info;
+    font-weight: bold;
 }
 
 </style>
