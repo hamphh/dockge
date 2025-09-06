@@ -128,6 +128,7 @@
                             :name="name"
                             :is-edit-mode="isEditMode"
                             :service="getServiceData(name)"
+                            :stats="getServiceStats(name)"
                         />
                     </div>
 
@@ -273,7 +274,8 @@ import {
     UNKNOWN
 } from "../../../common/util-common";
 import {
-    StackData
+    StackData,
+    StatsData
 } from "../../../common/types";
 import {
     ComposeDocument, ComposeService
@@ -294,6 +296,7 @@ const envDefault = "# VARIABLE=value #comment";
 
 let yamlErrorTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 let updateStackDataTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+let updateServiceStatsTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 
 let prismjsSymbolDefinition = {
     "symbol": {
@@ -325,11 +328,12 @@ export default defineComponent({
             combinedTerminalRows: COMBINED_TERMINAL_ROWS,
             combinedTerminalCols: COMBINED_TERMINAL_COLS,
             stack: {},
+            serviceStats: undefined,
             isEditMode: false,
             submitted: false,
             showDeleteDialog: false,
             newContainerName: "",
-            stopUpdateStackDataTimeout: false,
+            stopUpdateTimeouts: false,
         };
     },
     computed: {
@@ -488,6 +492,7 @@ export default defineComponent({
         }
 
         this.updateStackData();
+        this.startUpdateServiceStatsTimeout();
     },
     unmounted() {
 
@@ -509,13 +514,38 @@ export default defineComponent({
                 });
             }
 
-            if (!this.stopUpdateStackDataTimeout) {
+            if (!this.stopUpdateTimeouts) {
                 this.startUpdateStackDataTimeout();
+            }
+        },
+
+        startUpdateServiceStatsTimeout() {
+            clearTimeout(updateServiceStatsTimeout);
+            updateServiceStatsTimeout = setTimeout(async () => {
+                this.updateServiceStats();
+            }, 2000);
+        },
+
+        updateServiceStats() {
+            if (!this.isAdd && !this.isEditMode) {
+                this.$root.emitAgent(this.endpoint, "updateServiceStats", this.stack.name, (res) => {
+                    if (res.ok) {
+                        this.serviceStats = res.serviceStats;
+                    }
+                });
+            }
+
+            if (!this.stopUpdateTimeouts) {
+                this.startUpdateServiceStatsTimeout();
             }
         },
 
         getServiceData(serviceName) {
             return this.stack.services[serviceName];
+        },
+
+        getServiceStats(serviceName) {
+            return this.serviceStats?.[this.getServiceData(serviceName)?.containerName];
         },
 
         exitConfirm(next) {
@@ -534,7 +564,7 @@ export default defineComponent({
 
         exitAction() {
             console.log("exitAction");
-            this.stopUpdateStackDataTimeout = true;
+            this.stopUpdateTimeouts = true;
             clearTimeout(updateStackDataTimeout);
         },
 

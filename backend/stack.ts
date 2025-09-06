@@ -276,11 +276,9 @@ export class Stack {
         return serviceStats;
     }
 
-    async updateData(includeStats: boolean = false) {
+    async updateData() {
         const services = new Map<string, ServiceData>();
         const composeDocument = this.composeDocument;
-
-        const serviceStats = includeStats ? await this.getServiceStats() : new Map<string, StatsData>();
 
         try {
             const res = await childProcessAsync.spawn("docker", [ "compose", "ps", "--all", "--format", "json" ], {
@@ -346,8 +344,7 @@ export class Stack {
                             health: serviceInfo.Health,
                             recreateNecessary: recreateNecessary,
                             imageUpdateAvailable: serviceImageUpdateAvailable,
-                            remoteImageDigest: imageInfo.remoteDigest,
-                            stats: serviceStats.get(serviceInfo.Name)
+                            remoteImageDigest: imageInfo.remoteDigest
                         }
                     );
 

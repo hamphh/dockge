@@ -16,7 +16,6 @@ export type ServiceData = {
     recreateNecessary: boolean,
     imageUpdateAvailable: boolean,
     remoteImageDigest: string,
-    stats: StatsData | undefined
 }
 
 export type SimpleStackData = {

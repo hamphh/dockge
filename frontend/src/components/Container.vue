@@ -81,23 +81,23 @@
                 </a>
             </div>
         </div>
-        <div v-if="!isEditMode && service.stats" class="mt-2">
+        <div v-if="!isEditMode && stats" class="mt-2">
             <div class="d-flex align-items-start gap-3">
                 <span class="stats-select" @click="expandedStats = !expandedStats">
                     <font-awesome-icon :icon="expandedStats ? 'chevron-circle-down' : 'chevron-circle-right'" />
                 </span>
                 <template v-if="!expandedStats">
                     <div class="stats">
-                        {{ $t('CPU') }}: {{ service.stats.cpuPerc }}
+                        {{ $t('CPU') }}: {{ stats.cpuPerc }}
                     </div>
                     <div class="stats">
-                        {{ $t('memoryAbbreviated') }}: {{ service.stats.memUsage }}
+                        {{ $t('memoryAbbreviated') }}: {{ stats.memUsage }}
                     </div>
                 </template>
             </div>
             <transition name="slide-fade" appear>
                 <div v-if="expandedStats" class="d-flex flex-column gap-3 mt-2">
-                    <DockerStats :stats="service.stats" />
+                    <DockerStats :stats="stats" />
                 </div>
             </transition>
         </div>
@@ -226,7 +226,7 @@
 import { defineComponent, PropType } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { parseDockerPort } from "../../../common/util-common";
-import { ServiceData, StackData } from "../../../common/types";
+import { ServiceData, StatsData, StackData } from "../../../common/types";
 import { ComposeDocument, ComposeService, LABEL_IMAGEUPDATES_CHANGLOG, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../../../common/compose-document";
 
 export default defineComponent({
@@ -245,6 +245,10 @@ export default defineComponent({
         service: {
             type: Object as PropType<ServiceData>,
             default: {} as ServiceData,
+        },
+        stats: {
+            type: Object as PropType<StatsData>,
+            default: undefined,
         }
     },
     emits: [
