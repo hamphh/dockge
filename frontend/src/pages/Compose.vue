@@ -46,19 +46,19 @@
                         <span class="d-none d-xl-inline">{{ $t("stopStack") }}</span>
                     </button>
 
-                    <BDropdown right text="" variant="dark">
-                        <BDropdownItem @click="downStack">
+                    <BDropdown menu-class="compose-dropdown-menu" right text="" variant="dark" :disabled="processing">
+                        <BDropdownItem link-class="compose-dropdown-item-normal mb-1" @click="downStack">
                             <font-awesome-icon icon="stop" class="me-1" />
-                            <span class="d-none d-xl-inline">{{ $t("downStack") }}</span>
+                            <span>{{ $t("downStack") }}</span>
+                        </BDropdownItem>
+                        <BDropdownItem link-class="compose-dropdown-item-danger" @click="showDeleteDialog = !showDeleteDialog">
+                            <font-awesome-icon icon="trash" class="me-1" />
+                            <span>{{ $t("deleteStack") }}</span>
                         </BDropdownItem>
                     </BDropdown>
                 </div>
 
                 <button v-if="isEditMode && !isAdd" class="btn btn-normal" :disabled="processing" @click="discardStack">{{ $t("discardStack") }}</button>
-                <button v-if="!isEditMode" class="btn btn-danger" :disabled="processing" @click="showDeleteDialog = !showDeleteDialog">
-                    <font-awesome-icon icon="trash" class="me-1" />
-                    <span class="d-none d-xl-inline">{{ $t("deleteStack") }}</span>
-                </button>
             </div>
 
             <!-- URLs -->
@@ -855,4 +855,36 @@ export default defineComponent({
     font-size: 13px;
     color: $dark-font-color3;
 }
+
+:deep(.compose-dropdown-menu) {
+    --bs-dropdown-bg: #{$dark-bg};
+    --bs-dropdown-padding-x: 0.5rem;
+}
+
+:deep(.compose-dropdown-item-normal) {
+    $bg-color: $dark-header-bg;
+    $fg-color: $dark-font-color4;
+
+    background-color: $bg-color;
+    color: $fg-color;
+
+    &:hover {
+        background-color: lighten($bg-color, 8%);
+        color: $fg-color;
+    }
+}
+
+:deep(.compose-dropdown-item-danger) {
+    $bg-color: $danger;
+    $fg-color: white;
+
+    background-color: $bg-color;
+    color: $fg-color;
+
+    &:hover {
+        background-color: darken($bg-color, 8%);
+        color: $fg-color;
+    }
+}
+
 </style>
