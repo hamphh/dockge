@@ -21,7 +21,8 @@ import childProcessAsync from "promisify-child-process";
 import { Settings } from "./settings";
 import { ImageRepository } from "./image-repository";
 import { SimpleStackData, StackData, ServiceData, StatsData } from "../common/types";
-import { ComposeDocument, LABEL_STATUS_IGNORE, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../common/compose-document";
+import { ComposeDocument } from "../common/compose-document";
+import { LABEL_STATUS_IGNORE, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../common/compose-labels";
 
 export class Stack {
 

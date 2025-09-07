@@ -241,7 +241,8 @@ import { defineComponent, PropType } from "vue";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { parseDockerPort } from "../../../common/util-common";
 import { ServiceData, StatsData, StackData } from "../../../common/types";
-import { ComposeDocument, ComposeService, LABEL_STATUS_IGNORE, LABEL_IMAGEUPDATES_CHANGLOG, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE } from "../../../common/compose-document";
+import { ComposeDocument, ComposeService } from "../../../common/compose-document";
+import { LABEL_STATUS_IGNORE, LABEL_IMAGEUPDATES_CHECK, LABEL_IMAGEUPDATES_IGNORE, LABEL_IMAGEUPDATES_CHANGELOG } from "../../../common/compose-labels";
 
 export default defineComponent({
     components: {
@@ -395,7 +396,7 @@ export default defineComponent({
         },
 
         changelogLink(this: {composeService: ComposeService}): string {
-            return this.composeService.labels.get(LABEL_IMAGEUPDATES_CHANGLOG, "");
+            return this.composeService.labels.get(LABEL_IMAGEUPDATES_CHANGELOG, "");
         },
 
         isProcessing(): boolean {
@@ -475,9 +476,9 @@ export default defineComponent({
         updateChangelogLink(link: string) {
             const labels = this.composeService.labels;
             if (link) {
-                labels.set(LABEL_IMAGEUPDATES_CHANGLOG, link);
+                labels.set(LABEL_IMAGEUPDATES_CHANGELOG, link);
             } else {
-                labels.delete(LABEL_IMAGEUPDATES_CHANGLOG);
+                labels.delete(LABEL_IMAGEUPDATES_CHANGELOG);
                 labels.removeIfEmpty();
             }
         },

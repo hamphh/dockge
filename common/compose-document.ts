@@ -24,11 +24,6 @@ export type ComposeData = {
 
 export const X_DOCKGE = "x-dockge";
 
-export const LABEL_IMAGEUPDATES_CHANGLOG = "dockge.imageupdates.changelog";
-export const LABEL_IMAGEUPDATES_CHECK = "dockge.imageupdates.check";
-export const LABEL_IMAGEUPDATES_IGNORE = "dockge.imageupdates.ignore";
-export const LABEL_STATUS_IGNORE = "dockge.status.ignore";
-
 export class ComposeDocument {
 
     public readonly composeData: ComposeData;
