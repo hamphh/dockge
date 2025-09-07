@@ -113,7 +113,7 @@ export class Stack {
         return this._status == RUNNING || this._status == RUNNING_AND_EXITED || this._status == UNHEALTHY;
     }
 
-    validate() {
+    async validate() {
         // Check name, allows [a-z][0-9] _ - only
         if (!this.name.match(/^[a-z0-9_-]+$/)) {
             throw new ValidationError("Stack name can only contain [a-z][0-9] _ - only");
@@ -129,6 +129,49 @@ export class Stack {
         // It only happens when there is one line and it doesn't contain "="
         if (lines.length === 1 && !lines[0].includes("=") && lines[0].length > 0) {
             throw new ValidationError("Invalid .env format");
+        }
+
+        // save yaml and env as temporary files
+        const tempYamlName = this._composeFileName + ".tmp";
+        const tempEnvName = ".env.temp";
+
+        const tempYamlPath = path.join(this.path, tempYamlName);
+        const tempEnvPath = path.join(this.path, tempEnvName);
+
+        await this.saveFiles(tempYamlPath, tempEnvPath);
+
+        const hasEnvFile = this.composeENV.trim() !== "";
+
+        try {
+            // check the files with docker compose
+
+            const args = [ "compose", "-f", tempYamlName ];
+            if (hasEnvFile) {
+                args.push("--env-file", tempEnvName);
+            }
+            args.push("config", "--dry-run");
+
+            await childProcessAsync.spawn("docker", args, {
+                cwd: this.path,
+                encoding: "utf-8",
+            });
+        } catch (e) {
+            log.warn("validate", e);
+
+            let valMsg = (e as { stderr: string }).stderr?.trim();
+            if (valMsg) {
+                // remove prefix
+                valMsg = valMsg.replace(/^validating .*?: /, "");
+            }
+
+            throw new ValidationError(valMsg);
+        } finally {
+            // delete the temporary files
+
+            await fsAsync.unlink(tempYamlPath);
+            if (hasEnvFile) {
+                await fsAsync.unlink(tempEnvPath);
+            }
         }
     }
 
@@ -186,8 +229,6 @@ export class Stack {
      * @param isAdd
      */
     async save(isAdd : boolean) {
-        this.validate();
-
         let dir = this.path;
 
         // Check if the name is used if isAdd
@@ -204,10 +245,15 @@ export class Stack {
             }
         }
 
-        // Write or overwrite the compose.yaml
-        await fsAsync.writeFile(path.join(dir, this._composeFileName), this.composeYAML);
+        await this.validate();
 
-        const envPath = path.join(dir, ".env");
+        // Everthing is good, writing the main files
+        await this.saveFiles(path.join(dir, this._composeFileName), path.join(dir, ".env"));
+    }
+
+    private async saveFiles(yamlPath: string, envPath: string) {
+        // Write or overwrite the compose.yaml
+        await fsAsync.writeFile(yamlPath, this.composeYAML);
 
         // Write or overwrite the .env
         // If .env is not existing and the composeENV is empty, we don't need to write it
@@ -697,9 +743,5 @@ export class Stack {
 
         terminal.join(socket);
         terminal.start();
-    }
-
-    async validateComposeYAML(socket: DockgeSocket, composeYAML: string) {
-        // TODO: docker compose -f compose.temp config --dry-run
     }
 }
