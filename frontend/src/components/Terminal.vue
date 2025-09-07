@@ -66,7 +66,6 @@ export default {
     emits: [ "has-data" ],
     data() {
         return {
-            first: true,
             terminalInputBuffer: "",
             cursorPosition: 0,
         };
@@ -101,15 +100,15 @@ export default {
 
         // Bind to a div
         this.terminal.open(this.$refs.terminal);
-        this.terminal.focus();
+
+        if (this.mode !== "displayOnly") {
+            this.terminal.focus();
+        }
 
         // Notify parent component when data is received
         this.terminal.onCursorMove(() => {
             console.debug("onData triggered");
-            if (this.first) {
-                this.$emit("has-data");
-                this.first = false;
-            }
+            this.$emit("has-data");
         });
 
         this.bind();

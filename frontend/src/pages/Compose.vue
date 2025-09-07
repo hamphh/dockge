@@ -69,17 +69,23 @@
             </div>
 
             <!-- Progress Terminal -->
-            <transition name="slide-fade" appear>
-                <Terminal
-                    v-show="showProgressTerminal"
-                    ref="progressTerminal"
-                    class="mb-3 terminal"
-                    :name="terminalName"
-                    :endpoint="endpoint"
-                    :rows="progressTerminalRows"
-                    @has-data="showProgressTerminal = true; submitted = true;"
-                ></Terminal>
-            </transition>
+            <div v-if="!isEditMode">
+                <div :class="showProgressTerminal ? 'mb-1' : 'mb-3'" @click="showProgressTerminal = !showProgressTerminal">
+                    <font-awesome-icon :icon="showProgressTerminal ? 'chevron-circle-down' : 'chevron-circle-right'" class="me-2" />
+                    {{ $t("terminal") }}
+                </div>
+                <transition name="slide-fade" appear>
+                    <Terminal
+                        v-show="showProgressTerminal"
+                        ref="progressTerminal"
+                        class="mb-3 terminal"
+                        :name="terminalName"
+                        :endpoint="endpoint"
+                        :rows="progressTerminalRows"
+                        @has-data="terminalHasData"
+                    ></Terminal>
+                </transition>
+            </div>
 
             <div v-if="stack.isManagedByDockge" class="row">
                 <div class="col-lg-6">
@@ -148,7 +154,7 @@
 
                     <!-- Combined Terminal Output -->
                     <div v-show="!isEditMode">
-                        <h4 class="mb-3">{{ $t("terminal") }}</h4>
+                        <h4 class="mb-3">{{ $t("log") }}</h4>
                         <Terminal
                             ref="combinedTerminal"
                             class="mb-3 terminal"
@@ -165,7 +171,7 @@
 
                     <!-- YAML editor -->
                     <div class="shadow-box mb-3 editor-box" :class="{'edit-mode' : isEditMode}">
-                        <button v-if="isEditMode" v-b-modal.compose-editor-modal class="expand-button">
+                        <button v-if="isEditMode" v-b-modal.compose-editor-modal class="expand-button yaml-expand-button">
                             <font-awesome-icon icon="expand" />
                         </button>
                         <prism-editor
@@ -184,7 +190,7 @@
                     </div>
 
                     <!-- YAML modal fullscreen editor -->
-                    <BModal id="compose-editor-modal" :title="stack.composeFileName" scrollable size="lg" hide-footer>
+                    <BModal id="compose-editor-modal" :title="stack.composeFileName" scrollable size="xl" hide-footer>
                         <div class="shadow-box mb-3 editor-box" :class="{'edit-mode' : isEditMode}">
                             <prism-editor
                                 ref="editor"
@@ -273,13 +279,8 @@ import {
     PROGRESS_TERMINAL_ROWS,
     UNKNOWN
 } from "../../../common/util-common";
-import {
-    StackData,
-    StatsData
-} from "../../../common/types";
-import {
-    ComposeDocument, ComposeService
-} from "../../../common/compose-document";
+import { StackData } from "../../../common/types";
+import { ComposeDocument } from "../../../common/compose-document";
 import { BModal } from "bootstrap-vue-next";
 import NetworkInput from "../components/NetworkInput.vue";
 
@@ -297,6 +298,7 @@ const envDefault = "# VARIABLE=value #comment";
 let yamlErrorTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 let updateStackDataTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
 let updateServiceStatsTimeout: ReturnType<typeof setTimeout> | undefined = undefined;
+let autoHideTerminalTimout: ReturnType<typeof setTimeout> | undefined = undefined;
 
 let prismjsSymbolDefinition = {
     "symbol": {
@@ -572,6 +574,23 @@ export default defineComponent({
             this.$refs.progressTerminal?.bind(this.endpoint, this.terminalName);
         },
 
+        terminalHasData() {
+            this.showProgressTerminal = true;
+            this.submitted = true;
+            this.startTerminalAutoHideTimeout();
+        },
+
+        startTerminalAutoHideTimeout() {
+            clearTimeout(autoHideTerminalTimout);
+            autoHideTerminalTimout = setTimeout(async () => {
+                if (!this.processing) {
+                    this.showProgressTerminal = false;
+                } else {
+                    this.startTerminalAutoHideTimeout();
+                }
+            }, 10000);
+        },
+
         loadStack() {
             this.processing = true;
             this.$root.emitAgent(this.endpoint, "getStack", this.stack.name, (res) => {
@@ -814,10 +833,6 @@ export default defineComponent({
 .expand-button {
     all: unset;
     cursor: pointer;
-    position: absolute;
-    right: 15px;
-    top: 15px;
-    z-index: 10;
 }
 
 .expand-button svg {
@@ -826,7 +841,15 @@ export default defineComponent({
 }
 
 .expand-button:hover {
-    color: white;}
+    color: white;
+}
+
+.yaml-expand-button {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    z-index: 10;
+}
 
 .agent-name {
     font-size: 13px;
