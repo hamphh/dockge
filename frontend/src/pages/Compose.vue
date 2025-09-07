@@ -11,37 +11,37 @@
 
             <div v-if="stack.isManagedByDockge" class="mb-3">
                 <div class="btn-group me-2" role="group">
-                    <button v-if="isEditMode" class="btn btn-primary me-1" :disabled="processing" @click="deployStack">
+                    <button v-if="isEditMode" class="btn btn-primary me-1" data-toggle="tooltip" :title="$t('tooltipStackDeploy')" :disabled="processing" @click="deployStack">
                         <font-awesome-icon icon="rocket" class="me-1" />
                         {{ $t("deployStack") }}
                     </button>
 
-                    <button v-if="isEditMode" class="btn btn-normal me-1" :disabled="processing" @click="saveStack">
+                    <button v-if="isEditMode" class="btn btn-normal me-1" data-toggle="tooltip" :title="$t('tooltipStackSave')" :disabled="processing" @click="saveStack">
                         <font-awesome-icon icon="save" class="me-1" />
                         {{ $t("saveStackDraft") }}
                     </button>
 
-                    <button v-if="!isEditMode" class="btn btn-secondary me-1" :disabled="processing" @click="enableEditMode">
+                    <button v-if="!isEditMode" class="btn btn-secondary me-1" data-toggle="tooltip" :title="$t('tooltipStackEdit')" :disabled="processing" @click="enableEditMode">
                         <font-awesome-icon icon="pen" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("editStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode && (hasExitedServices || !stack.started)" class="btn btn-primary me-1" :disabled="processing" @click="startStack">
+                    <button v-if="!isEditMode && (hasExitedServices || !stack.started)" class="btn btn-primary me-1" data-toggle="tooltip" :title="$t('tooltipStackStart')" :disabled="processing" @click="startStack">
                         <font-awesome-icon icon="play" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("startStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal me-1" :disabled="processing" @click="restartStack">
+                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal me-1" data-toggle="tooltip" :title="$t('tooltipStackRestart')" :disabled="processing" @click="restartStack">
                         <font-awesome-icon icon="rotate" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("restartStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode" class="btn me-1" :class="stack.imageUpdatesAvailable ? 'btn-info' : 'btn-normal'" :disabled="processing" @click="updateStack">
+                    <button v-if="!isEditMode" class="btn me-1" data-toggle="tooltip" :title="$t('tooltipStackUpdate')" :class="stack.imageUpdatesAvailable ? 'btn-info' : 'btn-normal'" :disabled="processing" @click="updateStack">
                         <font-awesome-icon icon="cloud-arrow-down" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("updateStack") }}</span>
                     </button>
 
-                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal me-1" :disabled="processing" @click="stopStack">
+                    <button v-if="!isEditMode && hasRunningServices" class="btn btn-normal me-1" data-toggle="tooltip" :title="$t('tooltipStackStop')" :disabled="processing" @click="stopStack">
                         <font-awesome-icon icon="stop" class="me-1" />
                         <span class="d-none d-xl-inline">{{ $t("stopStack") }}</span>
                     </button>
@@ -58,7 +58,7 @@
                     </BDropdown>
                 </div>
 
-                <button v-if="isEditMode && !isAdd" class="btn btn-normal" :disabled="processing" @click="discardStack">{{ $t("discardStack") }}</button>
+                <button v-if="isEditMode && !isAdd" class="btn btn-normal" data-toggle="tooltip" :title="$t('tooltipStackDiscard')" :disabled="processing" @click="discardStack">{{ $t("discardStack") }}</button>
             </div>
 
             <!-- URLs -->

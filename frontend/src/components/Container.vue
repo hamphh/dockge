@@ -8,6 +8,7 @@
                 <button
                     v-if="!isEditMode && service.recreateNecessary"
                     class="btn btn-sm btn-info me-2"
+                    data-toggle="tooltip" :title="$t('tooltipServiceRecreate')"
                     :disabled="isProcessing"
                     @click="recreateService"
                 >
@@ -17,6 +18,7 @@
                 <button
                     v-if="!isEditMode && service.imageUpdateAvailable"
                     v-b-modal="updateModalId"
+                    data-toggle="tooltip" :title="$t('tooltipServiceUpdate')"
                     class="btn btn-sm btn-info me-2"
                     :disabled="isProcessing"
                 >
@@ -35,11 +37,11 @@
                             <a :href="changelogLink" target="_blank">{{ changelogLink }}</a>
                         </div>
                         <div class="d-flex justify-content-end mt-4">
-                            <button class="btn btn-normal me-4" @click="skipCurrentUpdate">
+                            <button class="btn btn-normal me-4" data-toggle="tooltip" :title="$t('tooltipServiceUpdateIgnore')" @click="skipCurrentUpdate">
                                 <font-awesome-icon icon="ban" class="me-1" />
                                 <span class="d-none d-xl-inline">{{ $t("ignoreUpdate") }}</span>
                             </button>
-                            <button class="btn btn-primary" @click="updateService">
+                            <button class="btn btn-primary" data-toggle="tooltip" :title="$t('tooltipDoServiceUpdate')" @click="updateService">
                                 <font-awesome-icon icon="cloud-arrow-down" class="me-1" />
                                 <span class="d-none d-xl-inline">{{ $t("updateStack") }}</span>
                             </button>
@@ -48,15 +50,15 @@
                 </BModal>
 
                 <div v-if="!isEditMode" class="btn-group me-2" role="group">
-                    <router-link v-if="started" class="btn btn-sm btn-normal me-1" :to="logRouteLink" :disabled="isProcessing"><font-awesome-icon icon="file-text" /></router-link>
-                    <router-link v-if="started" class="btn btn-sm btn-normal me-1" :to="inspectRouteLink" :disabled="isProcessing"><font-awesome-icon icon="info-circle" /></router-link>
-                    <router-link v-if="started" class="btn btn-sm btn-normal me-1" :to="terminalRouteLink" :disabled="isProcessing"><font-awesome-icon icon="terminal" /></router-link>
+                    <router-link v-if="started" class="btn btn-sm btn-normal me-1" data-toggle="tooltip" :title="$t('tooltipServiceLog')" :to="logRouteLink" :disabled="isProcessing"><font-awesome-icon icon="file-text" /></router-link>
+                    <router-link v-if="started" class="btn btn-sm btn-normal me-1" data-toggle="tooltip" :title="$t('tooltipServiceInspect')" :to="inspectRouteLink" :disabled="isProcessing"><font-awesome-icon icon="info-circle" /></router-link>
+                    <router-link v-if="started" class="btn btn-sm btn-normal me-1" data-toggle="tooltip" :title="$t('tooltipServiceTerminal')" :to="terminalRouteLink" :disabled="isProcessing"><font-awesome-icon icon="terminal" /></router-link>
                 </div>
 
                 <div v-if="!isEditMode" class="btn-group" role="group">
-                    <button v-if="!started" type="button" class="btn btn-sm btn-success" :disabled="isProcessing" @click="startService"><font-awesome-icon icon="play" /></button>
-                    <button v-if="started" type="button" class="btn btn-sm btn-danger me-1" :disabled="isProcessing" @click="stopService"><font-awesome-icon icon="stop" /></button>
-                    <button v-if="started" type="button" class="btn btn-sm btn-warning" :disabled="isProcessing" @click="restartService"><font-awesome-icon icon="rotate" /></button>
+                    <button v-if="!started" type="button" class="btn btn-sm btn-success" data-toggle="tooltip" :title="$t('tooltipServiceStart')" :disabled="isProcessing" @click="startService"><font-awesome-icon icon="play" /></button>
+                    <button v-if="started" type="button" class="btn btn-sm btn-danger me-1" data-toggle="tooltip" :title="$t('tooltipServiceStop')" :disabled="isProcessing" @click="stopService"><font-awesome-icon icon="stop" /></button>
+                    <button v-if="started" type="button" class="btn btn-sm btn-warning" data-toggle="tooltip" :title="$t('tooltipServiceRestart')" :disabled="isProcessing" @click="restartService"><font-awesome-icon icon="rotate" /></button>
                 </div>
             </div>
         </div>
